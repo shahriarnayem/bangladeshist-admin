@@ -1,553 +1,1115 @@
 'use client';
-import { useState, useRef } from 'react';
-import { BoldIcon, ItalicIcon, UnderlineIcon, StrikethroughIcon, Heading1Icon, Heading2Icon, Heading3Icon, Heading4Icon, QuoteIcon, ListIcon, ListOrderedIcon, CheckSquareIcon, CodeIcon, TableIcon, MinusIcon, LinkIcon, ImageIcon, EyeIcon, EditIcon, UploadCloudIcon, FolderOpenIcon, Loader2Icon } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
+import TextAlign from '@tiptap/extension-text-align';
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import Placeholder from '@tiptap/extension-placeholder';
+
+import {
+    BoldIcon,
+    ItalicIcon,
+    UnderlineIcon,
+    StrikethroughIcon,
+    CodeIcon,
+    QuoteIcon,
+    ListIcon,
+    ListOrderedIcon,
+    AlignLeftIcon,
+    AlignCenterIcon,
+    AlignRightIcon,
+    AlignJustifyIcon,
+    TableIcon,
+    MinusIcon,
+    LinkIcon,
+    UnlinkIcon,
+    ImageIcon,
+    Undo2Icon,
+    Redo2Icon,
+    RemoveFormattingIcon,
+    UploadCloudIcon,
+    FolderOpenIcon,
+    Loader2Icon,
+    EyeIcon,
+    PencilIcon,
+    Code2Icon,
+    PlusIcon,
+    Trash2Icon,
+    SparklesIcon,
+    CheckIcon,
+    FileTextIcon,
+    ColumnsIcon,
+    RowsIcon
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MediaLibraryDialog } from './MediaLibraryDialog';
-// Inline Markdown Parser: handles [text](url), **bold**, *italic*, and `code` safely into React nodes
-function renderInlineText(text) {
-    const regex = /(\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
-    const result = [];
-    let lastIndex = 0;
-    let match;
-    while((match = regex.exec(text)) !== null){
-        if (match.index > lastIndex) {
-            result.push(text.substring(lastIndex, match.index));
-        }
-        const [full, , linkText, linkUrl, boldText, italicText, codeText] = match;
-        if (linkText && linkUrl) {
-            result.push(<a key={match.index} href={linkUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-2 text-foreground hover:text-foreground/80 decoration-foreground/40 hover:decoration-foreground">
-          {linkText}
-        </a>);
-        } else if (boldText) {
-            result.push(<strong key={match.index} className="font-bold text-foreground">
-          {boldText}
-        </strong>);
-        } else if (italicText) {
-            result.push(<em key={match.index} className="italic">
-          {italicText}
-        </em>);
-        } else if (codeText) {
-            result.push(<code key={match.index} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground border">
-          {codeText}
-        </code>);
-        }
-        lastIndex = match.index + full.length;
-    }
-    if (lastIndex < text.length) {
-        result.push(text.substring(lastIndex));
-    }
-    return result;
-}
-export function WordpressEditor({ value, onChange, placeholder = 'Draft your editorial story here...', minHeight = '420px', authorId }) {
-    const textareaRef = useRef(null);
-    const [activeTab, setActiveTab] = useState('write');
+
+export function WordpressEditor({
+    value = '',
+    onChange,
+    placeholder = 'Start writing your editorial story in visual format...',
+    minHeight = '480px',
+    authorId
+}) {
+    // Modes: 'visual' (WordPress Visual/Blogger Compose), 'html' (WordPress Text/Blogger HTML), 'preview' (Live Broadsheet)
+    const [viewMode, setViewMode] = useState('visual');
+    const [rawHtml, setRawHtml] = useState(value || '');
+
     // Link Dialog State
     const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
-    const [linkText, setLinkText] = useState('');
     const [linkUrl, setLinkUrl] = useState('');
     const [linkNewTab, setLinkNewTab] = useState(true);
-    // Image Insert Dialog State
+
+    // Media Dialogs State
     const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
     const [isLibraryDialogOpen, setIsLibraryDialogOpen] = useState(false);
     const [imageCaption, setImageCaption] = useState('');
+    const [imageUrlInput, setImageUrlInput] = useState('');
     const [isUploadingImage, setIsUploadingImage] = useState(false);
-    // Table Generator Dialog
-    const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
-    const [tableRows, setTableRows] = useState(3);
-    const [tableCols, setTableCols] = useState(3);
-    // Helpers to insert or wrap markdown at current cursor position
-    const wrapSelection = (prefix, suffix = '', defaultText = 'text')=>{
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selected = value.substring(start, end) || defaultText;
-        const replacement = `${prefix}${selected}${suffix}`;
-        const nextValue = value.substring(0, start) + replacement + value.substring(end);
-        onChange(nextValue);
-        setTimeout(()=>{
-            textarea.focus();
-            textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
-        }, 0);
-    };
-    const insertBlock = (block)=>{
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const prefix = start > 0 && !value.endsWith('\n') ? '\n\n' : '';
-        const replacement = `${prefix}${block}\n\n`;
-        const nextValue = value.substring(0, start) + replacement + value.substring(end);
-        onChange(nextValue);
-        setTimeout(()=>{
-            textarea.focus();
-            textarea.setSelectionRange(start + replacement.length, start + replacement.length);
-        }, 0);
-    };
-    // Insert Link
-    const handleInsertLink = (e)=>{
-        e.preventDefault();
-        if (!linkUrl.trim()) {
-            toast.error('URL is required');
-            return;
+
+    // TipTap Editor Instance
+    const editor = useEditor({
+        immediatelyRender: false,
+        extensions: [
+            StarterKit.configure({
+                heading: {
+                    levels: [1, 2, 3, 4]
+                }
+            }),
+            Underline,
+            Link.configure({
+                openOnClick: false,
+                HTMLAttributes: {
+                    class: 'text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary font-medium cursor-pointer'
+                }
+            }),
+            Image.configure({
+                inline: false,
+                allowBase64: true,
+                HTMLAttributes: {
+                    class: 'rounded-md border border-border shadow-xs my-4 max-w-full h-auto mx-auto block'
+                }
+            }),
+            TextAlign.configure({
+                types: ['heading', 'paragraph']
+            }),
+            Table.configure({
+                resizable: true,
+                HTMLAttributes: {
+                    class: 'w-full my-4 border-collapse border border-border rounded-md text-sm'
+                }
+            }),
+            TableRow,
+            TableHeader.configure({
+                HTMLAttributes: {
+                    class: 'border border-border bg-muted/60 p-2.5 font-semibold text-left text-xs uppercase tracking-wider'
+                }
+            }),
+            TableCell.configure({
+                HTMLAttributes: {
+                    class: 'border border-border p-2.5 text-left text-sm'
+                }
+            }),
+            Placeholder.configure({
+                placeholder
+            })
+        ],
+        content: value || '',
+        onUpdate: ({ editor: ed }) => {
+            const html = ed.getHTML();
+            setRawHtml(html);
+            if (onChange) {
+                onChange(html);
+            }
         }
-        const anchor = linkText.trim() || linkUrl.trim();
-        const targetSuffix = linkNewTab ? '{:target="_blank"}' : '';
-        const md = `[${anchor}](${linkUrl.trim()})${targetSuffix}`;
-        wrapSelection('', '', md);
+    });
+
+    // Synchronize external value changes (e.g. on async article load)
+    useEffect(() => {
+        if (!editor) return;
+        const currentHTML = editor.getHTML();
+        if (value !== undefined && value !== currentHTML) {
+            // Only update if current editor is empty or content is substantially different
+            if (editor.getText().trim() === '' || Math.abs((value?.length || 0) - currentHTML.length) > 15) {
+                editor.commands.setContent(value || '', false);
+                setRawHtml(value || '');
+            }
+        }
+    }, [editor, value]);
+
+    // Handle view mode switches
+    const handleSwitchMode = (newMode) => {
+        if (viewMode === 'html' && newMode !== 'html') {
+            // Sync HTML edits back into TipTap
+            if (editor) {
+                editor.commands.setContent(rawHtml, false);
+                if (onChange) onChange(rawHtml);
+            }
+        } else if (newMode === 'html' && editor) {
+            // Ensure rawHtml reflects latest visual state
+            setRawHtml(editor.getHTML());
+        }
+        setViewMode(newMode);
+    };
+
+    // Calculate real-time stats
+    const textStats = useMemo(() => {
+        const text = editor ? editor.getText() : (rawHtml.replace(/<[^>]*>/g, '') || '');
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const characters = text.length;
+        const readingMinutes = Math.max(1, Math.ceil(words / 200));
+        return { words, characters, readingMinutes };
+    }, [editor, rawHtml, viewMode]);
+
+    // Format selection handler for headings / paragraphs
+    const activeHeadingLevel = useMemo(() => {
+        if (!editor) return 'p';
+        if (editor.isActive('heading', { level: 1 })) return 'h1';
+        if (editor.isActive('heading', { level: 2 })) return 'h2';
+        if (editor.isActive('heading', { level: 3 })) return 'h3';
+        if (editor.isActive('heading', { level: 4 })) return 'h4';
+        return 'p';
+    }, [editor]);
+
+    const handleFormatChange = (format) => {
+        if (!editor) return;
+        if (format === 'p') {
+            editor.chain().focus().setParagraph().run();
+        } else if (format === 'h1') {
+            editor.chain().focus().toggleHeading({ level: 1 }).run();
+        } else if (format === 'h2') {
+            editor.chain().focus().toggleHeading({ level: 2 }).run();
+        } else if (format === 'h3') {
+            editor.chain().focus().toggleHeading({ level: 3 }).run();
+        } else if (format === 'h4') {
+            editor.chain().focus().toggleHeading({ level: 4 }).run();
+        }
+    };
+
+    // Link Action
+    const openLinkDialog = () => {
+        if (!editor) return;
+        const previousUrl = editor.getAttributes('link').href;
+        setLinkUrl(previousUrl || '');
+        setIsLinkDialogOpen(true);
+    };
+
+    const handleSaveLink = (e) => {
+        if (e) e.preventDefault();
+        if (!editor) return;
+        if (!linkUrl.trim()) {
+            editor.chain().focus().extendMarkRange('link').unsetLink().run();
+        } else {
+            editor.chain().focus().extendMarkRange('link').setLink({
+                href: linkUrl.trim(),
+                target: linkNewTab ? '_blank' : null
+            }).run();
+        }
         setIsLinkDialogOpen(false);
-        setLinkText('');
         setLinkUrl('');
     };
-    // Upload inline image from device
-    const handleUploadImage = async (e)=>{
+
+    // Upload image from local file directly to Cloudinary
+    const handleUploadLocalImage = async (e) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || !editor) return;
         try {
             setIsUploadingImage(true);
             const fd = new FormData();
             fd.append('file', file);
             if (authorId) fd.append('userId', authorId);
+
             const res = await fetch('/api/upload', {
                 method: 'POST',
-                headers: authorId ? {
-                    'x-user-id': authorId
-                } : {},
+                headers: authorId ? { 'x-user-id': authorId } : {},
                 body: fd
             });
             const data = await res.json();
             if (data.success && data.url) {
-                const alt = imageCaption.trim() || 'Editorial Illustration';
-                const md = `\n\n![${alt}](${data.url})\n*${alt}*\n\n`;
-                insertBlock(md);
-                toast.success('Photo uploaded to Cloudinary & inserted');
+                const alt = imageCaption.trim() || file.name.replace(/\.[^/.]+$/, '');
+                editor.chain().focus().setImage({
+                    src: data.url,
+                    alt,
+                    title: alt
+                }).run();
+                toast.success('Photo uploaded to Cloudinary & inserted into story');
                 setIsImageDialogOpen(false);
                 setImageCaption('');
             } else {
                 toast.error(data.error || 'Upload failed');
             }
-        } catch  {
-            toast.error('Network error uploading photo');
-        } finally{
+        } catch {
+            toast.error('Network error uploading image');
+        } finally {
             setIsUploadingImage(false);
             e.target.value = '';
         }
     };
-    // Select image from Media Library
-    const handleLibrarySelect = (asset)=>{
+
+    // Insert image from Media Library
+    const handleSelectFromLibrary = (asset) => {
+        if (!editor || !asset?.url) return;
         const alt = imageCaption.trim() || asset.caption || asset.name;
-        const md = `\n\n![${alt}](${asset.url})\n*${alt}*\n\n`;
-        insertBlock(md);
+        editor.chain().focus().setImage({
+            src: asset.url,
+            alt,
+            title: alt
+        }).run();
         setIsImageDialogOpen(false);
         setIsLibraryDialogOpen(false);
         setImageCaption('');
-        toast.success(`Embedded "${asset.name}" from Media Library`);
+        toast.success(`Inserted "${asset.name}" from Media Library`);
     };
-    // Generate Table Markdown
-    const handleInsertTable = ()=>{
-        let headerRow = '|';
-        let dividerRow = '|';
-        for(let c = 1; c <= tableCols; c++){
-            headerRow += ` Column ${c} |`;
-            dividerRow += ' --- |';
-        }
-        let rowsStr = '';
-        for(let r = 1; r <= tableRows; r++){
-            let row = '|';
-            for(let c = 1; c <= tableCols; c++){
-                row += ` Data ${r}.${c} |`;
-            }
-            rowsStr += `\n${row}`;
-        }
-        const tableMd = `${headerRow}\n${dividerRow}${rowsStr}`;
-        insertBlock(tableMd);
-        setIsTableDialogOpen(false);
-        toast.success('Table inserted');
+
+    // Insert image from external URL
+    const handleInsertFromUrl = (e) => {
+        if (e) e.preventDefault();
+        if (!editor || !imageUrlInput.trim()) return;
+        const alt = imageCaption.trim() || 'Editorial Illustration';
+        editor.chain().focus().setImage({
+            src: imageUrlInput.trim(),
+            alt,
+            title: alt
+        }).run();
+        setIsImageDialogOpen(false);
+        setImageUrlInput('');
+        setImageCaption('');
+        toast.success('Embedded image from URL');
     };
-    // Word & Reading Stats Calculation
-    const wordsCount = value.trim() ? value.trim().split(/\s+/).length : 0;
-    const readingTime = Math.max(1, Math.ceil(wordsCount / 220));
-    const charsCount = value.length;
-    return <div className="border rounded-lg bg-card overflow-hidden shadow-xs">
-      { /* Top Header / Mode Switcher */ }
-      <div className="flex flex-wrap items-center justify-between border-b px-3 py-2 bg-muted/40 gap-2">
-        <div className="flex items-center gap-1">
-          <span className="font-serif font-bold text-xs uppercase tracking-wider text-foreground">
-            Newsroom Desk
-          </span>
-          <span className="text-muted-foreground text-xs font-mono">• WordPress Engine</span>
-        </div>
 
-        { /* Write / Live Broadsheet Preview Tabs */ }
-        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-md text-xs">
-          <button type="button" onClick={()=>setActiveTab('write')} className={`flex items-center gap-1 px-3 py-1 rounded transition-all font-medium ${activeTab === 'write' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
-            <EditIcon className="size-3"/> Visual Write
-          </button>
-          <button type="button" onClick={()=>setActiveTab('preview')} className={`flex items-center gap-1 px-3 py-1 rounded transition-all font-medium ${activeTab === 'preview' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
-            <EyeIcon className="size-3"/> Live Preview
-          </button>
-        </div>
-      </div>
+    // Table Actions
+    const handleInsertTable = () => {
+        if (!editor) return;
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        toast.success('Inserted 3×3 editorial table');
+    };
 
-      { /* WordPress Journalistic Toolbar */ }
-      {activeTab === 'write' && <div className="flex flex-wrap items-center gap-1 p-2 bg-muted/20 border-b text-xs">
-          { /* Headings */ }
-          <div className="flex items-center gap-0.5">
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs font-bold font-serif" onClick={()=>insertBlock('# Lead Headline (H1)')} title="Headline (H1)">
-              <Heading1Icon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs font-bold font-serif" onClick={()=>insertBlock('## Section Heading (H2)')} title="Major Section (H2)">
-              <Heading2Icon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs font-bold font-serif" onClick={()=>insertBlock('### Subsection (H3)')} title="Subsection (H3)">
-              <Heading3Icon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs font-bold font-serif" onClick={()=>insertBlock('#### Minor Heading (H4)')} title="Minor Heading (H4)">
-              <Heading4Icon className="size-3.5"/>
-            </Button>
-          </div>
+    const isInsideTable = editor ? editor.isActive('table') : false;
 
-          <div className="w-[1px] h-4 bg-border mx-1"/>
+    return (
+        <div className="rounded-lg border border-border bg-card text-card-foreground shadow-xs overflow-hidden">
+            {/* Top Toolbar: WordPress & Blogger.com Style Header */}
+            <div className="flex flex-wrap items-center justify-between border-b border-border bg-muted/30 px-3 py-2 gap-2">
+                {/* Left: View Mode Tabs (Visual, HTML, Live Broadsheet Preview) */}
+                <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5">
+                    <button
+                        type="button"
+                        onClick={() => handleSwitchMode('visual')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                            viewMode === 'visual'
+                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="Visual Editor (WordPress / Blogger Compose View)"
+                    >
+                        <PencilIcon className="size-3.5" />
+                        <span>Visual</span>
+                    </button>
 
-          { /* Text Styles */ }
-          <div className="flex items-center gap-0.5">
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>wrapSelection('**', '**', 'bold text')} title="Bold (Ctrl+B)">
-              <BoldIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>wrapSelection('*', '*', 'italic text')} title="Italic (Ctrl+I)">
-              <ItalicIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>wrapSelection('<u>', '</u>', 'underlined text')} title="Underline">
-              <UnderlineIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>wrapSelection('~~', '~~', 'strikethrough')} title="Strikethrough">
-              <StrikethroughIcon className="size-3.5"/>
-            </Button>
-          </div>
+                    <button
+                        type="button"
+                        onClick={() => handleSwitchMode('html')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                            viewMode === 'html'
+                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="HTML Source Editor (WordPress Text / Blogger HTML View)"
+                    >
+                        <Code2Icon className="size-3.5" />
+                        <span>HTML</span>
+                    </button>
 
-          <div className="w-[1px] h-4 bg-border mx-1"/>
+                    <button
+                        type="button"
+                        onClick={() => handleSwitchMode('preview')}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                            viewMode === 'preview'
+                                ? 'bg-primary text-primary-foreground shadow-xs'
+                                : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                        title="Live Broadsheet Reader Preview"
+                    >
+                        <EyeIcon className="size-3.5" />
+                        <span>Preview</span>
+                    </button>
+                </div>
 
-          { /* Quotes and Lists */ }
-          <div className="flex items-center gap-0.5">
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>insertBlock('> "Quoted statement from official source or interview."\n> — Source Attribution')} title="Pull Quote / Blockquote">
-              <QuoteIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>insertBlock('- First bulleted point\n- Second bulleted point\n- Third bulleted point')} title="Bulleted List">
-              <ListIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>insertBlock('1. Primary sequential stage\n2. Secondary stage\n3. Conclusion')} title="Numbered List">
-              <ListOrderedIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>insertBlock('- [ ] Pending item\n- [x] Verified fact')} title="Checklist / Task List">
-              <CheckSquareIcon className="size-3.5"/>
-            </Button>
-          </div>
+                {/* Right: Word Count & Reader Stats Badge */}
+                <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+                    <span className="hidden sm:inline">
+                        <strong>{textStats.words}</strong> words
+                    </span>
+                    <span className="text-border">•</span>
+                    <span>
+                        ~{textStats.readingMinutes} min read
+                    </span>
+                </div>
+            </div>
 
-          <div className="w-[1px] h-4 bg-border mx-1"/>
+            {/* Second Toolbar Row: Formatting Tools (Visible in Visual Mode) */}
+            {viewMode === 'visual' && editor && (
+                <div className="flex flex-wrap items-center gap-1 border-b border-border bg-muted/15 p-2 text-foreground">
+                    {/* History */}
+                    <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().undo().run()}
+                            disabled={!editor.can().undo()}
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                            title="Undo (Ctrl+Z)"
+                        >
+                            <Undo2Icon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().redo().run()}
+                            disabled={!editor.can().redo()}
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                            title="Redo (Ctrl+Y)"
+                        >
+                            <Redo2Icon className="size-4" />
+                        </button>
+                    </div>
 
-          { /* Code, Table, Divider */ }
-          <div className="flex items-center gap-0.5">
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>wrapSelection('`', '`', 'inlineCode')} title="Inline Code">
-              <CodeIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>setIsTableDialogOpen(true)} title="Insert Formatted Table">
-              <TableIcon className="size-3.5"/>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={()=>insertBlock('---')} title="Horizontal Divider">
-              <MinusIcon className="size-3.5"/>
-            </Button>
-          </div>
+                    {/* Block Heading Selector */}
+                    <div className="pr-1 border-r border-border">
+                        <select
+                            value={activeHeadingLevel}
+                            onChange={(e) => handleFormatChange(e.target.value)}
+                            className="h-8 rounded border border-border bg-background px-2 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            aria-label="Text Block Format"
+                        >
+                            <option value="p">Paragraph</option>
+                            <option value="h1">Heading 1 (Hero)</option>
+                            <option value="h2">Heading 2 (Major)</option>
+                            <option value="h3">Heading 3 (Section)</option>
+                            <option value="h4">Heading 4 (Subdeck)</option>
+                        </select>
+                    </div>
 
-          <div className="w-[1px] h-4 bg-border mx-1"/>
+                    {/* Inline Formatting: Bold, Italic, Underline, Strike, Code */}
+                    <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleBold().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('bold')
+                                    ? 'bg-primary text-primary-foreground font-bold'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Bold (Ctrl+B)"
+                        >
+                            <BoldIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleItalic().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('italic')
+                                    ? 'bg-primary text-primary-foreground font-bold'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Italic (Ctrl+I)"
+                        >
+                            <ItalicIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleUnderline().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('underline')
+                                    ? 'bg-primary text-primary-foreground font-bold'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Underline (Ctrl+U)"
+                        >
+                            <UnderlineIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleStrike().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('strike')
+                                    ? 'bg-primary text-primary-foreground font-bold'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Strikethrough"
+                        >
+                            <StrikethroughIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleCode().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('code')
+                                    ? 'bg-primary text-primary-foreground font-bold'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Inline Code"
+                        >
+                            <CodeIcon className="size-4" />
+                        </button>
+                    </div>
 
-          { /* Media & Link Action Buttons */ }
-          <div className="flex items-center gap-1 ml-auto">
-            <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={()=>setIsLinkDialogOpen(true)} title="Insert Hyperlink">
-              <LinkIcon className="size-3.5"/>
-              <span>Link</span>
-            </Button>
-            <Button type="button" variant="default" size="sm" className="h-7 text-xs gap-1 font-medium" onClick={()=>setIsImageDialogOpen(true)} title="Upload or Select Image">
-              <ImageIcon className="size-3.5"/>
-              <span>Add Media</span>
-            </Button>
-          </div>
-        </div>}
+                    {/* Text Alignment */}
+                    <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive({ textAlign: 'left' })
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Align Left"
+                        >
+                            <AlignLeftIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive({ textAlign: 'center' })
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Align Center"
+                        >
+                            <AlignCenterIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive({ textAlign: 'right' })
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Align Right"
+                        >
+                            <AlignRightIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive({ textAlign: 'justify' })
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Justify"
+                        >
+                            <AlignJustifyIcon className="size-4" />
+                        </button>
+                    </div>
 
-      { /* Editor Content Area */ }
-      <div className="relative">
-        {activeTab === 'write' ? <Textarea ref={textareaRef} value={value} onChange={(e)=>onChange(e.target.value)} placeholder={placeholder} style={{
-        minHeight
-    }} className="w-full rounded-none border-0 p-4 font-mono text-xs leading-relaxed focus-visible:ring-0 resize-y"/> : /* Live Broadsheet Preview */ <div style={{
-        minHeight
-    }} className="p-6 bg-muted/10 font-serif leading-relaxed text-sm space-y-4 max-w-none">
-            {value.trim() ? value.split('\n\n').map((block, idx)=>{
-        const trimmed = block.trim();
-        // H1
-        if (trimmed.startsWith('# ')) {
-            return <h1 key={idx} className="font-serif font-black text-2xl sm:text-3xl text-foreground tracking-tight border-b pb-2 mt-4">
-                      {renderInlineText(trimmed.replace('# ', ''))}
-                    </h1>;
-        }
-        // H2
-        if (trimmed.startsWith('## ')) {
-            return <h2 key={idx} className="font-sans font-bold text-xl text-foreground tracking-tight mt-5 mb-2">
-                      {renderInlineText(trimmed.replace('## ', ''))}
-                    </h2>;
-        }
-        // H3
-        if (trimmed.startsWith('### ')) {
-            return <h3 key={idx} className="font-sans font-semibold text-base text-foreground mt-4 mb-1">
-                      {renderInlineText(trimmed.replace('### ', ''))}
-                    </h3>;
-        }
-        // H4
-        if (trimmed.startsWith('#### ')) {
-            return <h4 key={idx} className="font-sans font-semibold text-sm uppercase tracking-wider text-muted-foreground mt-3 mb-1">
-                      {renderInlineText(trimmed.replace('#### ', ''))}
-                    </h4>;
-        }
-        // Horizontal Rule
-        if (trimmed === '---' || trimmed === '***') {
-            return <hr key={idx} className="my-6 border-border"/>;
-        }
-        // Code Block (Fenced ```)
-        if (trimmed.startsWith('```')) {
-            const lines = trimmed.split('\n');
-            const lang = lines[0].replace('```', '').trim();
-            const code1 = lines.slice(1, lines[lines.length - 1].startsWith('```') ? -1 : undefined).join('\n');
-            return <div key={idx} className="my-4 rounded-md border bg-muted/60 overflow-hidden font-mono text-xs">
-                      {lang && <div className="bg-muted px-3 py-1 text-[10px] uppercase font-semibold text-muted-foreground border-b tracking-wider">
-                          {lang}
-                        </div>}
-                      <pre className="p-3.5 overflow-x-auto text-[11px] leading-relaxed">
-                        <code>{code1}</code>
-                      </pre>
-                    </div>;
-        }
-        // Blockquote
-        if (trimmed.startsWith('> ')) {
-            const quoteLines = trimmed.split('\n> ');
-            return <blockquote key={idx} className="border-l-4 border-foreground pl-4 py-1 italic font-serif text-foreground/90 my-3 bg-muted/20 rounded-r">
-                      {quoteLines.map((line, qIdx)=><p key={qIdx} className="leading-relaxed">
-                          {renderInlineText(line.replace(/^> /, ''))}
-                        </p>)}
-                    </blockquote>;
-        }
-        // Task Checklist (- [ ] or - [x])
-        if (trimmed.startsWith('- [ ]') || trimmed.startsWith('- [x]')) {
-            const items = trimmed.split('\n');
-            return <ul key={idx} className="space-y-1.5 font-sans text-xs my-2.5">
-                      {items.map((item, i)=>{
-                const isChecked = item.trim().startsWith('- [x]');
-                const itemText = item.trim().replace(/^- \[[ x]\]\s*/, '');
-                return <li key={i} className="flex items-center gap-2">
-                            <input type="checkbox" checked={isChecked} readOnly className="rounded border-muted pointer-events-none size-3.5"/>
-                            <span className={isChecked ? 'line-through text-muted-foreground' : ''}>
-                              {renderInlineText(itemText)}
-                            </span>
-                          </li>;
-            })}
-                    </ul>;
-        }
-        // Bulleted List
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-            const items = trimmed.split(/\n[-*] /);
-            return <ul key={idx} className="list-disc list-inside space-y-1 font-sans text-xs my-2 pl-2">
-                      {items.map((item, i)=><li key={i}>{renderInlineText(item.replace(/^[-*] /, ''))}</li>)}
-                    </ul>;
-        }
-        // Numbered List
-        if (/^\d+\. /.test(trimmed)) {
-            const items = trimmed.split(/\n\d+\. /);
-            return <ol key={idx} className="list-decimal list-inside space-y-1 font-sans text-xs my-2 pl-2">
-                      {items.map((item, i)=><li key={i}>{renderInlineText(item.replace(/^\d+\. /, ''))}</li>)}
-                    </ol>;
-        }
-        // Tables
-        if (trimmed.includes('|') && trimmed.includes('\n|')) {
-            const rows = trimmed.split('\n').filter((r)=>r.trim().startsWith('|'));
-            if (rows.length >= 2) {
-                const headerCells = rows[0].split('|').filter((c)=>c.trim());
-                const dataRows = rows.slice(2);
-                return <div key={idx} className="overflow-x-auto my-4 border rounded-md">
-                        <table className="w-full text-xs font-sans text-left border-collapse">
-                          <thead className="bg-muted/60 border-b">
-                            <tr>
-                              {headerCells.map((h, hIdx)=><th key={hIdx} className="p-2.5 font-bold border-r last:border-r-0">
-                                  {renderInlineText(h.trim())}
-                                </th>)}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {dataRows.map((row, rIdx)=>{
-                    const cells = row.split('|').filter((c)=>c.trim());
-                    return <tr key={rIdx} className="border-b last:border-b-0 hover:bg-muted/20">
-                                  {cells.map((cell, cIdx)=><td key={cIdx} className="p-2 border-r last:border-r-0">
-                                      {renderInlineText(cell.trim())}
-                                    </td>)}
-                                </tr>;
-                })}
-                          </tbody>
-                        </table>
-                      </div>;
-            }
-        }
-        // Image with Caption Embed
-        if (trimmed.startsWith('![') && trimmed.includes('](')) {
-            const match = trimmed.match(/!\[(.*?)\]\((.*?)\)/);
-            if (match) {
-                return <figure key={idx} className="my-5 space-y-1.5 text-center">
-                        <div className="overflow-hidden rounded-lg border bg-muted/40 max-h-[460px] flex items-center justify-center">
-                          { /* eslint-disable-next-line @next/next/no-img-element */ }
-                          <img src={match[2]} alt={match[1]} className="w-full h-full object-cover max-h-[460px]" onError={(e)=>{
-                    ;
-                    e.target.style.display = 'none';
-                }}/>
+                    {/* Lists, Quote, Divider */}
+                    <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleBulletList().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('bulletList')
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Bulleted List"
+                        >
+                            <ListIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('orderedList')
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Numbered List"
+                        >
+                            <ListOrderedIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('blockquote')
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Editorial Blockquote"
+                        >
+                            <QuoteIcon className="size-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                            title="Horizontal Divider"
+                        >
+                            <MinusIcon className="size-4" />
+                        </button>
+                    </div>
+
+                    {/* Links & Media: WordPress-Style "Add Media" */}
+                    <div className="flex items-center gap-1 pr-1 border-r border-border">
+                        <button
+                            type="button"
+                            onClick={openLinkDialog}
+                            className={`p-1.5 rounded transition-colors ${
+                                editor.isActive('link')
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Insert / Edit Hyperlink"
+                        >
+                            <LinkIcon className="size-4" />
+                        </button>
+
+                        {editor.isActive('link') && (
+                            <button
+                                type="button"
+                                onClick={() => editor.chain().focus().unsetLink().run()}
+                                className="p-1.5 rounded hover:bg-destructive/10 text-destructive"
+                                title="Remove Link"
+                            >
+                                <UnlinkIcon className="size-4" />
+                            </button>
+                        )}
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsImageDialogOpen(true)}
+                            className="h-8 gap-1.5 px-2 text-xs font-semibold"
+                            title="Insert Image (WordPress / Blogger Media)"
+                        >
+                            <ImageIcon className="size-3.5" />
+                            <span>Add Media</span>
+                        </Button>
+                    </div>
+
+                    {/* Table Tools */}
+                    <div className="flex items-center gap-0.5">
+                        <button
+                            type="button"
+                            onClick={handleInsertTable}
+                            className={`p-1.5 rounded transition-colors ${
+                                isInsideTable ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                            }`}
+                            title="Insert Table Grid"
+                        >
+                            <TableIcon className="size-4" />
+                        </button>
+
+                        {isInsideTable && (
+                            <div className="flex items-center gap-0.5 pl-1 border-l border-border">
+                                <button
+                                    type="button"
+                                    onClick={() => editor.chain().focus().addRowAfter().run()}
+                                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    title="Add Row Below"
+                                >
+                                    <RowsIcon className="size-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => editor.chain().focus().addColumnAfter().run()}
+                                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    title="Add Column Right"
+                                >
+                                    <ColumnsIcon className="size-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => editor.chain().focus().deleteRow().run()}
+                                    className="p-1.5 rounded hover:bg-destructive/10 text-destructive"
+                                    title="Delete Current Row"
+                                >
+                                    <MinusIcon className="size-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => editor.chain().focus().deleteTable().run()}
+                                    className="p-1.5 rounded hover:bg-destructive/10 text-destructive"
+                                    title="Delete Entire Table"
+                                >
+                                    <Trash2Icon className="size-3.5" />
+                                </button>
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground ml-auto"
+                            title="Clear Formatting"
+                        >
+                            <RemoveFormattingIcon className="size-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Editor Canvas Area */}
+            <div className="relative bg-background">
+                {/* 1. VISUAL MODE (WordPress / Blogger Live WYSIWYG) */}
+                {viewMode === 'visual' && (
+                    <div
+                        className="prose-editor-wrapper p-6 focus:outline-none"
+                        style={{ minHeight }}
+                        onClick={() => {
+                            if (editor && !editor.isFocused) {
+                                editor.commands.focus();
+                            }
+                        }}
+                    >
+                        <EditorContent editor={editor} />
+                    </div>
+                )}
+
+                {/* 2. HTML MODE (WordPress Text / Blogger HTML View) */}
+                {viewMode === 'html' && (
+                    <div className="p-4" style={{ minHeight }}>
+                        <div className="flex items-center justify-between pb-2 text-[11px] font-mono text-muted-foreground border-b border-border/40 mb-3">
+                            <span>HTML Source View (WordPress & Blogger compatible markup)</span>
+                            <span className="text-[10px]">Changes synchronize automatically</span>
                         </div>
-                        {match[1] && <figcaption className="text-xs font-sans text-muted-foreground italic">
-                            Photo: {match[1]}
-                          </figcaption>}
-                      </figure>;
-            }
-        }
-        // Standard Paragraph
-        return <p key={idx} className="font-sans text-xs text-foreground/90 leading-relaxed">
-                    {renderInlineText(trimmed)}
-                  </p>;
-    }) : <div className="py-20 text-center text-xs text-muted-foreground font-sans">
-                No story content drafted yet. Switch to "Visual Write" mode to compose.
-              </div>}
-          </div>}
-      </div>
+                        <textarea
+                            value={rawHtml}
+                            onChange={(e) => {
+                                setRawHtml(e.target.value);
+                                if (onChange) onChange(e.target.value);
+                            }}
+                            className="w-full bg-muted/20 text-foreground font-mono text-xs p-4 rounded-md border border-border focus:outline-none focus:ring-1 focus:ring-ring resize-y leading-relaxed"
+                            style={{ minHeight: '400px' }}
+                            placeholder="<p>Draft HTML tags directly...</p>"
+                        />
+                    </div>
+                )}
 
-      { /* Bottom Status Bar (Word Count & Reading Time) */ }
-      <div className="flex items-center justify-between border-t px-3 py-1.5 bg-muted/30 text-[11px] font-mono text-muted-foreground">
-        <div className="flex items-center gap-3">
-          <span>{wordsCount} Words</span>
-          <span>•</span>
-          <span>{charsCount} Characters</span>
-          <span>•</span>
-          <span>{readingTime} Min Read</span>
+                {/* 3. PREVIEW MODE (Live Broadsheet Layout Preview) */}
+                {viewMode === 'preview' && (
+                    <div className="p-8 max-w-3xl mx-auto space-y-6" style={{ minHeight }}>
+                        {/* Broadsheet Lead Header Preview */}
+                        <div className="border-b border-border pb-4 space-y-2">
+                            <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                                <span>The Chronicle Broadsheet • Live Preview</span>
+                                <span>Reading time: ~{textStats.readingMinutes} min</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                                {textStats.words} words • {textStats.characters} characters
+                            </div>
+                        </div>
+
+                        {/* Rendered Visual Content */}
+                        <div
+                            className="broadsheet-preview-content prose max-w-none dark:prose-invert"
+                            dangerouslySetInnerHTML={{
+                                __html:
+                                    (editor ? editor.getHTML() : rawHtml) ||
+                                    '<p class="italic text-muted-foreground">No editorial content drafted yet. Switch to Visual mode to write your story.</p>'
+                            }}
+                        />
+
+                        <div className="pt-8 border-t border-border flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground font-mono">
+                                End of Wire Dispatch
+                            </span>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSwitchMode('visual')}
+                                className="text-xs gap-1.5"
+                            >
+                                <PencilIcon className="size-3.5" /> Back to Visual Editor
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Bottom Status Bar (Classic WordPress Footer Bar) */}
+            <div className="flex items-center justify-between border-t border-border bg-muted/25 px-4 py-2 text-[11px] font-mono text-muted-foreground">
+                <div className="flex items-center gap-3">
+                    <span className="uppercase font-semibold tracking-wider text-foreground">
+                        {viewMode === 'visual' ? 'Visual (WYSIWYG)' : viewMode === 'html' ? 'HTML Source' : 'Broadsheet Reader'}
+                    </span>
+                    <span className="text-border">|</span>
+                    <span>Format: {activeHeadingLevel.toUpperCase()}</span>
+                    {isInsideTable && (
+                        <>
+                            <span className="text-border">|</span>
+                            <Badge variant="outline" className="text-[10px] h-4 font-mono">
+                                Table Active
+                            </Badge>
+                        </>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <span>Words: {textStats.words}</span>
+                    <span className="text-border">|</span>
+                    <span>Characters: {textStats.characters}</span>
+                </div>
+            </div>
+
+            {/* Hyperlink Dialog */}
+            <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+                            <LinkIcon className="size-4" /> Insert Hyperlink
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Attach a destination web address to the selected text.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSaveLink} className="space-y-4 py-2">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="link-url" className="text-xs font-semibold">Destination URL *</Label>
+                            <Input
+                                id="link-url"
+                                placeholder="https://example.com/report"
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                                className="text-xs"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                            <input
+                                type="checkbox"
+                                id="link-new-tab"
+                                checked={linkNewTab}
+                                onChange={(e) => setLinkNewTab(e.target.checked)}
+                                className="rounded border-border"
+                            />
+                            <Label htmlFor="link-new-tab" className="text-xs text-muted-foreground cursor-pointer">
+                                Open link in a new browser tab (`target="_blank"`)
+                            </Label>
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsLinkDialogOpen(false)}
+                                className="text-xs"
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit" size="sm" className="text-xs">
+                                Apply Link
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Media Insert Dialog (WordPress & Blogger Add Media) */}
+            <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+                            <ImageIcon className="size-4" /> Add Editorial Photojournalism Asset
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Upload directly via Cloudinary, select from Media Library, or insert an external web image.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold">Image Caption / Alt Text</Label>
+                            <Input
+                                placeholder="e.g., Summit delegates confer during afternoon session"
+                                value={imageCaption}
+                                onChange={(e) => setImageCaption(e.target.value)}
+                                className="text-xs"
+                            />
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 pt-2">
+                            {/* Option 1: Upload from Computer */}
+                            <label className="flex flex-col items-center justify-center gap-2 p-5 rounded-lg border-2 border-dashed border-border hover:border-primary/50 bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors text-center">
+                                {isUploadingImage ? (
+                                    <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+                                ) : (
+                                    <UploadCloudIcon className="size-6 text-muted-foreground" />
+                                )}
+                                <div>
+                                    <div className="text-xs font-semibold">Upload Photo</div>
+                                    <div className="text-[10px] text-muted-foreground">JPG, PNG, WebP via Cloudinary</div>
+                                </div>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleUploadLocalImage}
+                                    disabled={isUploadingImage}
+                                />
+                            </label>
+
+                            {/* Option 2: Select from Media Library */}
+                            <button
+                                type="button"
+                                onClick={() => setIsLibraryDialogOpen(true)}
+                                className="flex flex-col items-center justify-center gap-2 p-5 rounded-lg border border-border hover:border-primary/50 bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors text-center"
+                            >
+                                <FolderOpenIcon className="size-6 text-muted-foreground" />
+                                <div>
+                                    <div className="text-xs font-semibold">Media Library</div>
+                                    <div className="text-[10px] text-muted-foreground">Browse newsroom archives</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Option 3: Direct Web Image URL */}
+                        <div className="border-t border-border pt-3 space-y-2">
+                            <Label className="text-xs font-semibold">Or Embed via Image URL</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="https://images.unsplash.com/photo-..."
+                                    value={imageUrlInput}
+                                    onChange={(e) => setImageUrlInput(e.target.value)}
+                                    className="text-xs flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={handleInsertFromUrl}
+                                    disabled={!imageUrlInput.trim()}
+                                    className="text-xs shrink-0"
+                                >
+                                    Insert URL
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Media Library Selector Dialog */}
+            <MediaLibraryDialog
+                open={isLibraryDialogOpen}
+                onOpenChange={setIsLibraryDialogOpen}
+                onSelect={handleSelectFromLibrary}
+                title="Select Photo from Editorial Media Library"
+                description="Choose an existing media asset. Role permissions are automatically respected."
+            />
+
+            {/* Scoped CSS for TipTap Content and Broadsheet Typography */}
+            <style jsx global>{`
+                .prose-editor-wrapper .tiptap {
+                    outline: none;
+                    min-height: 420px;
+                    color: inherit;
+                    line-height: 1.75;
+                    font-size: 0.95rem;
+                }
+
+                .prose-editor-wrapper .tiptap p {
+                    margin-bottom: 1rem;
+                }
+
+                .prose-editor-wrapper .tiptap p.is-editor-empty:first-child::before {
+                    content: attr(data-placeholder);
+                    float: left;
+                    color: var(--muted-foreground);
+                    opacity: 0.6;
+                    pointer-events: none;
+                    height: 0;
+                }
+
+                .prose-editor-wrapper .tiptap h1 {
+                    font-size: 1.85rem;
+                    font-weight: 700;
+                    letter-spacing: -0.02em;
+                    line-height: 1.25;
+                    margin-top: 1.75rem;
+                    margin-bottom: 0.75rem;
+                    color: var(--foreground);
+                }
+
+                .prose-editor-wrapper .tiptap h2 {
+                    font-size: 1.45rem;
+                    font-weight: 700;
+                    letter-spacing: -0.015em;
+                    line-height: 1.3;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.5rem;
+                    color: var(--foreground);
+                }
+
+                .prose-editor-wrapper .tiptap h3 {
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    line-height: 1.35;
+                    margin-top: 1.25rem;
+                    margin-bottom: 0.5rem;
+                    color: var(--foreground);
+                }
+
+                .prose-editor-wrapper .tiptap h4 {
+                    font-size: 1.05rem;
+                    font-weight: 600;
+                    line-height: 1.4;
+                    margin-top: 1rem;
+                    margin-bottom: 0.5rem;
+                    color: var(--foreground);
+                }
+
+                .prose-editor-wrapper .tiptap blockquote {
+                    border-left: 3px solid var(--foreground);
+                    padding-left: 1.25rem;
+                    margin: 1.25rem 0;
+                    font-style: italic;
+                    color: var(--muted-foreground);
+                }
+
+                .prose-editor-wrapper .tiptap ul {
+                    list-style-type: disc;
+                    padding-left: 1.75rem;
+                    margin: 0.75rem 0 1rem;
+                }
+
+                .prose-editor-wrapper .tiptap ol {
+                    list-style-type: decimal;
+                    padding-left: 1.75rem;
+                    margin: 0.75rem 0 1rem;
+                }
+
+                .prose-editor-wrapper .tiptap li {
+                    margin-bottom: 0.35rem;
+                }
+
+                .prose-editor-wrapper .tiptap code {
+                    font-family: var(--font-mono);
+                    font-size: 0.85em;
+                    background: var(--muted);
+                    padding: 0.15em 0.35em;
+                    border-radius: 0.25rem;
+                    border: 1px solid var(--border);
+                }
+
+                .prose-editor-wrapper .tiptap pre {
+                    background: var(--muted);
+                    padding: 0.85rem 1rem;
+                    border-radius: 0.375rem;
+                    overflow-x: auto;
+                    margin: 1rem 0;
+                    font-family: var(--font-mono);
+                    font-size: 0.85rem;
+                    border: 1px solid var(--border);
+                }
+
+                .prose-editor-wrapper .tiptap hr {
+                    border: 0;
+                    border-top: 1px solid var(--border);
+                    margin: 1.75rem 0;
+                }
+
+                .prose-editor-wrapper .tiptap table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 1.25rem 0;
+                    font-size: 0.875rem;
+                }
+
+                .prose-editor-wrapper .tiptap th,
+                .prose-editor-wrapper .tiptap td {
+                    border: 1px solid var(--border);
+                    padding: 0.5rem 0.75rem;
+                    text-align: left;
+                    vertical-align: top;
+                }
+
+                .prose-editor-wrapper .tiptap th {
+                    background: var(--muted);
+                    font-weight: 600;
+                }
+
+                .prose-editor-wrapper .tiptap img {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 0.375rem;
+                    margin: 1.25rem auto;
+                    display: block;
+                    border: 1px solid var(--border);
+                }
+
+                /* Broadsheet Live Preview Styling */
+                .broadsheet-preview-content {
+                    font-size: 1.05rem;
+                    line-height: 1.85;
+                }
+
+                .broadsheet-preview-content p:first-of-type::first-letter {
+                    font-size: 3.25rem;
+                    font-weight: 700;
+                    float: left;
+                    line-height: 0.85;
+                    margin-right: 0.65rem;
+                    margin-top: 0.25rem;
+                    color: var(--foreground);
+                }
+
+                .broadsheet-preview-content h1,
+                .broadsheet-preview-content h2,
+                .broadsheet-preview-content h3 {
+                    letter-spacing: -0.02em;
+                    color: var(--foreground);
+                    font-weight: 700;
+                }
+
+                .broadsheet-preview-content blockquote {
+                    font-style: italic;
+                    border-left: 3px solid var(--foreground);
+                    padding-left: 1.25rem;
+                    margin: 1.5rem 0;
+                    color: var(--muted-foreground);
+                }
+
+                .broadsheet-preview-content table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 1.5rem 0;
+                }
+
+                .broadsheet-preview-content th,
+                .broadsheet-preview-content td {
+                    border: 1px solid var(--border);
+                    padding: 0.65rem 0.85rem;
+                }
+
+                .broadsheet-preview-content th {
+                    background: var(--muted);
+                    font-weight: 600;
+                }
+
+                .broadsheet-preview-content img {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 0.375rem;
+                    margin: 1.5rem auto;
+                    border: 1px solid var(--border);
+                }
+            `}</style>
         </div>
-        <div className="flex items-center gap-2">
-          <span>Markdown GFM</span>
-        </div>
-      </div>
-
-      { /* Insert Hyperlink Dialog */ }
-      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleInsertLink}>
-            <DialogHeader>
-              <DialogTitle className="text-base font-semibold">Insert Citation / Hyperlink</DialogTitle>
-              <DialogDescription className="text-xs">
-                Add an anchor text and destination web link.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 py-3">
-              <div className="space-y-1">
-                <Label htmlFor="link-text" className="text-xs">Display Anchor Text</Label>
-                <Input id="link-text" placeholder="e.g. read the official whitepaper" value={linkText} onChange={(e)=>setLinkText(e.target.value)} className="text-xs"/>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="link-url" className="text-xs">Target Web URL *</Label>
-                <Input id="link-url" placeholder="https://..." value={linkUrl} onChange={(e)=>setLinkUrl(e.target.value)} className="text-xs font-mono" required/>
-              </div>
-              <div className="flex items-center gap-2 pt-1 text-xs">
-                <input type="checkbox" id="link-newtab" checked={linkNewTab} onChange={(e)=>setLinkNewTab(e.target.checked)} className="rounded border-muted"/>
-                <label htmlFor="link-newtab" className="cursor-pointer">
-                  Open link in new browser tab
-                </label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" size="sm" onClick={()=>setIsLinkDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" size="sm">
-                Insert Link
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      { /* Insert Image Dialog with Upload AND Select from Media Library */ }
-      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold">Embed Photojournalism Asset</DialogTitle>
-            <DialogDescription className="text-xs">
-              Upload photo from device or choose an asset from your Media Library.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Caption / Alt Description</Label>
-              <Input placeholder="e.g. Treasury Secretary during press briefing" value={imageCaption} onChange={(e)=>setImageCaption(e.target.value)} className="text-xs"/>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              { /* Option 1: Direct File Upload to Cloudinary */ }
-              <label className="border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/30 transition-colors">
-                {isUploadingImage ? <Loader2Icon className="size-6 animate-spin text-muted-foreground"/> : <UploadCloudIcon className="size-6 text-muted-foreground"/>}
-                <span className="mt-2 text-xs font-semibold">Upload from Device</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Direct to Cloudinary</span>
-                <input type="file" accept="image/*" className="hidden" disabled={isUploadingImage} onChange={handleUploadImage}/>
-              </label>
-
-              { /* Option 2: Choose from Media Library */ }
-              <div onClick={()=>setIsLibraryDialogOpen(true)} className="border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/30 transition-colors">
-                <FolderOpenIcon className="size-6 text-muted-foreground"/>
-                <span className="mt-2 text-xs font-semibold">Media Library</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Choose Existing</span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={()=>setIsImageDialogOpen(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      { /* Media Library Modal for Image Insertion */ }
-      <MediaLibraryDialog open={isLibraryDialogOpen} onOpenChange={setIsLibraryDialogOpen} onSelect={handleLibrarySelect} title="Select Media Asset to Embed"/>
-
-      { /* Table Generator Dialog */ }
-      <Dialog open={isTableDialogOpen} onOpenChange={setIsTableDialogOpen}>
-        <DialogContent className="sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold">Insert Data Table</DialogTitle>
-            <DialogDescription className="text-xs">
-              Configure grid columns and rows.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-3 py-2 text-xs">
-            <div className="space-y-1">
-              <Label className="text-xs">Columns</Label>
-              <Input type="number" min={1} max={8} value={tableCols} onChange={(e)=>setTableCols(Number(e.target.value) || 2)} className="text-xs h-8"/>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Rows</Label>
-              <Input type="number" min={1} max={20} value={tableRows} onChange={(e)=>setTableRows(Number(e.target.value) || 2)} className="text-xs h-8"/>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={()=>setIsTableDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleInsertTable}>
-              Generate Table
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>;
+    );
 }
