@@ -9,8 +9,18 @@ export async function GET(req, { params }) {
                 id
             },
             include: {
-                category: true,
-                author: true,
+                category: {
+                    include: {
+                        parent: true
+                    }
+                },
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        role: true
+                    }
+                },
                 tags: true
             }
         });
@@ -39,7 +49,21 @@ export async function PUT(req, { params }) {
     try {
         const { id } = await params;
         const body = await req.json();
-        const { title, slug: customSlug, summary, content, categoryId, authorId, status, featuredImage, isBreaking, isFeatured } = body;
+        const {
+            title,
+            slug: customSlug,
+            summary,
+            content,
+            categoryId,
+            authorId,
+            source,
+            tagNames,
+            tagIds,
+            status,
+            featuredImage,
+            isBreaking,
+            isFeatured
+        } = body;
         const existing = await db.article.findUnique({
             where: {
                 id
@@ -60,6 +84,32 @@ export async function PUT(req, { params }) {
         if (content !== undefined) updateData.content = content?.trim() || '';
         if (categoryId !== undefined) updateData.categoryId = categoryId;
         if (authorId !== undefined) updateData.authorId = authorId;
+        if (source !== undefined) updateData.source = source?.trim() || null;
+
+        if (Array.isArray(tagNames)) {
+            const resolvedTagIds = [];
+            for (const rawName of tagNames) {
+                const cleanName = typeof rawName === 'string' ? rawName.trim() : '';
+                if (!cleanName) continue;
+                const tSlug = slugify(cleanName);
+                try {
+                    const tag = await db.tag.upsert({
+                        where: { slug: tSlug },
+                        update: { count: { increment: 1 } },
+                        create: { name: cleanName, slug: tSlug, count: 1 }
+                    });
+                    if (!resolvedTagIds.includes(tag.id)) {
+                        resolvedTagIds.push(tag.id);
+                    }
+                } catch {
+                    // Ignore individual upsert error
+                }
+            }
+            updateData.tagIds = resolvedTagIds;
+        } else if (Array.isArray(tagIds)) {
+            updateData.tagIds = tagIds;
+        }
+
         if (status !== undefined) {
             updateData.status = status;
             if (status === 'PUBLISHED' && !existing.publishDate) {
@@ -75,8 +125,19 @@ export async function PUT(req, { params }) {
             },
             data: updateData,
             include: {
-                category: true,
-                author: true
+                category: {
+                    include: {
+                        parent: true
+                    }
+                },
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        role: true
+                    }
+                },
+                tags: true
             }
         });
         await logAudit('update', 'Article', id, `Updated article "${updated.title}"`);

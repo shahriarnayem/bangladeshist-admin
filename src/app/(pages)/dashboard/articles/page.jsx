@@ -136,12 +136,17 @@ export default function ArticlesPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant='outline' className='text-[10px] font-mono'>
-                        {article.category?.name || 'General'}
+                        {article.category?.parent?.name ? `${article.category.parent.name} → ${article.category.name}` : (article.category?.name || 'General')}
                       </Badge>
+                      {article.source && (
+                        <div className='text-[10px] text-muted-foreground mt-0.5 font-mono line-clamp-1'>
+                          {article.source}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <div className='text-xs font-medium'>{article.author?.name || 'Editorial Desk'}</div>
-                      <div className='text-muted-foreground text-[10px] uppercase font-mono'>{article.author?.role || 'STAFF'}</div>
+                      <div className='text-xs font-medium'>{article.author?.name || 'Staff Author'}</div>
+                      <div className='text-muted-foreground text-[10px] uppercase font-mono'>{article.author?.role || 'EDITORIAL'}</div>
                     </TableCell>
                     <TableCell className='text-right font-mono text-xs font-semibold'>
                       {(article.views || 0).toLocaleString()}
