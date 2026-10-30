@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ImagePicker } from '@/components/shared/ImagePicker';
 import { WordpressEditor } from '@/components/shared/WordpressEditor';
 import { SeoTracker } from '@/components/shared/SeoTracker';
-import { buildCategoryTree } from '@/lib/taxonomy';
+import { CategoryMultiSelector, buildCategoryTree } from '@/components/shared/CategoryMultiSelector';
 
 export default function NewArticlePage() {
     const router = useRouter();
@@ -25,6 +25,7 @@ export default function NewArticlePage() {
     const [summary, setSummary] = useState('');
     const [content, setContent] = useState('');
     const [categoryId, setCategoryId] = useState('');
+    const [categoryIds, setCategoryIds] = useState([]);
     const [categories, setCategories] = useState([]);
     const [source, setSource] = useState('Staff Reporting');
     const [tags, setTags] = useState([]);
@@ -54,6 +55,7 @@ export default function NewArticlePage() {
                     if (cData.categories && cData.categories.length > 0) {
                         setCategories(cData.categories);
                         setCategoryId(cData.categories[0].id);
+                        setCategoryIds([cData.categories[0].id]);
                     }
                 }
                 if (usersRes.ok) {
@@ -138,7 +140,8 @@ export default function NewArticlePage() {
                     slug: slug.trim(),
                     summary: summary.trim(),
                     content: content.trim(),
-                    categoryId: categoryId || undefined,
+                    categoryId: categoryId || (categoryIds.length > 0 ? categoryIds[0] : undefined),
+                    categoryIds: categoryIds,
                     authorId: currentUser?.id || undefined,
                     source: source.trim() || null,
                     tagNames: tags,
@@ -291,32 +294,21 @@ export default function NewArticlePage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className='space-y-4'>
-                            {/* Desk / Section Beat */}
+                            {/* Desk / Section Beat & Categories (Multi-select + Inline Add) */}
                             <div className='space-y-1.5'>
-                                <Label className="text-xs font-semibold">Desk / Section Beat</Label>
-                                <Select
-                                    value={categoryId}
-                                    onValueChange={(v) => {
-                                        if (v) setCategoryId(v);
+                                <Label className="text-xs font-semibold">Editorial Desk & Categories</Label>
+                                <CategoryMultiSelector
+                                    categories={categories}
+                                    selectedIds={categoryIds}
+                                    primaryId={categoryId}
+                                    onChange={({ categoryIds: nextIds, primaryId: nextPrimary }) => {
+                                        setCategoryIds(nextIds);
+                                        setCategoryId(nextPrimary);
                                     }}
-                                >
-                                    <SelectTrigger className='w-full text-xs font-medium'>
-                                        <SelectValue placeholder='Select category beat'>
-                                            {selectedCategoryLabel || 'Select category beat'}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent className='max-h-72'>
-                                        {categoryTree.map((c) => (
-                                            <SelectItem
-                                                key={c.id}
-                                                value={c.id}
-                                                className={c.depth > 0 ? 'pl-6 text-muted-foreground font-normal' : 'font-semibold text-foreground'}
-                                            >
-                                                {c.depth > 0 ? `— ${c.name}` : c.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    onCategoryCreated={(newCat) => {
+                                        setCategories((prev) => [newCat, ...prev]);
+                                    }}
+                                />
                             </div>
 
                             {/* Article Source / Wire Agency */}

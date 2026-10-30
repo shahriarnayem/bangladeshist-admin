@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ImagePicker } from '@/components/shared/ImagePicker';
 import { WordpressEditor } from '@/components/shared/WordpressEditor';
 import { SeoTracker } from '@/components/shared/SeoTracker';
-import { buildCategoryTree } from '@/lib/taxonomy';
+import { CategoryMultiSelector, buildCategoryTree } from '@/components/shared/CategoryMultiSelector';
 
 export default function EditArticlePage({ params }) {
     const router = useRouter();
@@ -46,6 +46,7 @@ export default function EditArticlePage({ params }) {
     const [isBreaking, setIsBreaking] = useState(false);
     const [isFeatured, setIsFeatured] = useState(false);
     const [categoryId, setCategoryId] = useState('');
+    const [categoryIds, setCategoryIds] = useState([]);
     const [categories, setCategories] = useState([]);
     const [source, setSource] = useState('');
     const [tags, setTags] = useState([]);
@@ -95,6 +96,10 @@ export default function EditArticlePage({ params }) {
                         setIsFeatured(Boolean(a1.isFeatured));
                         setFeaturedImage(a1.featuredImage || '');
                         setCategoryId(a1.categoryId || '');
+                        const initialCategoryIds = Array.isArray(a1.categoryIds) && a1.categoryIds.length > 0
+                            ? a1.categoryIds
+                            : (a1.categoryId ? [a1.categoryId] : []);
+                        setCategoryIds(initialCategoryIds);
                         setAuthorId(a1.authorId || '');
                         setSource(a1.source || '');
                         setMetaTitle(a1.metaTitle || '');
@@ -178,7 +183,8 @@ export default function EditArticlePage({ params }) {
                     slug: slug.trim(),
                     summary: summary.trim(),
                     content: content.trim(),
-                    categoryId: categoryId || undefined,
+                    categoryId: categoryId || (categoryIds.length > 0 ? categoryIds[0] : undefined),
+                    categoryIds: categoryIds,
                     authorId: authorId || undefined,
                     source: source.trim() || null,
                     tagNames: tags,
@@ -419,32 +425,21 @@ export default function EditArticlePage({ params }) {
                                 </Select>
                             </div>
 
-                            {/* Desk / Section Beat */}
+                            {/* Desk / Section Beat & Categories (Multi-select + Inline Add) */}
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold">Desk / Section Beat</Label>
-                                <Select
-                                    value={categoryId}
-                                    onValueChange={(val) => {
-                                        if (val) setCategoryId(val);
+                                <Label className="text-xs font-semibold">Editorial Desk & Categories</Label>
+                                <CategoryMultiSelector
+                                    categories={categories}
+                                    selectedIds={categoryIds}
+                                    primaryId={categoryId}
+                                    onChange={({ categoryIds: nextIds, primaryId: nextPrimary }) => {
+                                        setCategoryIds(nextIds);
+                                        setCategoryId(nextPrimary);
                                     }}
-                                >
-                                    <SelectTrigger className="text-xs font-medium">
-                                        <SelectValue placeholder="Select Category Beat">
-                                            {selectedCategoryLabel || 'Select Category Beat'}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-72">
-                                        {categoryTree.map((c) => (
-                                            <SelectItem
-                                                key={c.id}
-                                                value={c.id}
-                                                className={c.depth > 0 ? 'pl-6 text-muted-foreground font-normal' : 'font-semibold text-foreground'}
-                                            >
-                                                {c.depth > 0 ? `— ${c.name}` : c.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    onCategoryCreated={(newCat) => {
+                                        setCategories((prev) => [newCat, ...prev]);
+                                    }}
+                                />
                             </div>
 
                             {/* Article Source / Wire Agency */}

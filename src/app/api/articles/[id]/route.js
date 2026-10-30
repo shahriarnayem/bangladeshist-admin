@@ -55,6 +55,7 @@ export async function PUT(req, { params }) {
             summary,
             content,
             categoryId,
+            categoryIds,
             authorId,
             source,
             tagNames,
@@ -87,7 +88,19 @@ export async function PUT(req, { params }) {
         if (customSlug !== undefined) updateData.slug = slugify(customSlug);
         if (summary !== undefined) updateData.summary = summary?.trim() || null;
         if (content !== undefined) updateData.content = content?.trim() || '';
-        if (categoryId !== undefined) updateData.categoryId = categoryId;
+        if (categoryIds !== undefined && Array.isArray(categoryIds)) {
+            const cleanIds = categoryIds.filter(Boolean);
+            updateData.categoryIds = cleanIds;
+            if (cleanIds.length > 0 && !categoryId) {
+                updateData.categoryId = cleanIds[0];
+            }
+        }
+        if (categoryId !== undefined) {
+            updateData.categoryId = categoryId;
+            if (updateData.categoryIds && !updateData.categoryIds.includes(categoryId)) {
+                updateData.categoryIds = [categoryId, ...updateData.categoryIds];
+            }
+        }
         if (authorId !== undefined) updateData.authorId = authorId;
         if (source !== undefined) updateData.source = source?.trim() || null;
 

@@ -48,6 +48,11 @@ export async function GET(req) {
           categoryId: category
         },
         {
+          categoryIds: {
+            has: category
+          }
+        },
+        {
           category: {
             slug: category
           }
@@ -131,6 +136,7 @@ export async function POST(req) {
       summary,
       content,
       categoryId,
+      categoryIds = [],
       authorId,
       source,
       tagNames = [],
@@ -188,8 +194,10 @@ export async function POST(req) {
       finalAuthorId = defaultUser?.id;
     }
 
-    // Fallback category if none specified
-    let finalCategoryId = categoryId;
+    // Multi-category resolution and fallback
+    let finalCategoryIds = Array.isArray(categoryIds) ? categoryIds.filter(Boolean) : [];
+    let finalCategoryId = categoryId || (finalCategoryIds.length > 0 ? finalCategoryIds[0] : null);
+
     if (!finalCategoryId) {
       const defaultCat = await db.category.findFirst({
         where: {
@@ -198,6 +206,10 @@ export async function POST(req) {
         select: { id: true }
       });
       finalCategoryId = defaultCat?.id;
+    }
+
+    if (finalCategoryId && !finalCategoryIds.includes(finalCategoryId)) {
+      finalCategoryIds.unshift(finalCategoryId);
     }
 
     // Resolve Tags: Upsert any tag names and collect their IDs
@@ -229,6 +241,7 @@ export async function POST(req) {
         summary: summary?.trim() || null,
         content: content?.trim() || '',
         categoryId: finalCategoryId,
+        categoryIds: finalCategoryIds,
         authorId: finalAuthorId || null,
         source: source?.trim() || null,
         tagIds: resolvedTagIds,
