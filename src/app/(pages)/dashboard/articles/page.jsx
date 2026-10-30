@@ -131,7 +131,7 @@ export default function ArticlesPage() {
                         </Link>
                         <div className='flex items-center gap-2'>
                           <p className='font-mono text-xs text-muted-foreground line-clamp-1'>
-                            /articles/{article.slug}
+                            /{article.slug}
                           </p>
                           {article.metaTitle || article.keywords ? (
                             <Badge variant='outline' className='text-[9px] h-4 px-1.5 py-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-mono shrink-0'>
@@ -183,7 +183,7 @@ export default function ArticlesPage() {
                           <DropdownMenuItem render={<Link href={`/dashboard/articles/${article.id}/edit`}>
                                 <Edit3Icon className='mr-2 size-3.5'/> Edit Story
                               </Link>}/>
-                          <DropdownMenuItem render={<a href={`https://thechronicle.press/articles/${article.slug}`} target='_blank' rel='noreferrer'>
+                          <DropdownMenuItem render={<a href={`https://thechronicle.press/${article.slug}`} target='_blank' rel='noreferrer'>
                                 <ExternalLinkIcon className='mr-2 size-3.5'/> Public URL
                               </a>}/>
                           <DropdownMenuItem className='text-destructive' onClick={()=>handleDelete(article.id, article.title)}>

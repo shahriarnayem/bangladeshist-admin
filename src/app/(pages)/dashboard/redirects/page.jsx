@@ -167,7 +167,7 @@ export default function RedirectsPage() {
 
               <div className='space-y-1.5'>
                 <Label className='text-xs font-semibold'>Target Destination *</Label>
-                <Input placeholder='/articles/new-slug or https://...' value={newTarget} onChange={(e)=>setNewTarget(e.target.value)} className='font-mono text-xs' required/>
+                <Input placeholder='/new-slug or https://...' value={newTarget} onChange={(e)=>setNewTarget(e.target.value)} className='font-mono text-xs' required/>
               </div>
 
               <div className='space-y-1.5'>

@@ -79,7 +79,7 @@ export default function HomepageBuilderPage() {
     const [heroLayout, setHeroLayout] = useState('1+4');
     const [breakingEnabled, setBreakingEnabled] = useState(true);
     const [breakingText, setBreakingText] = useState('BREAKING: Law Commission submits initial framework for electoral governance overhaul');
-    const [breakingUrl, setBreakingUrl] = useState('/articles/constitutional-reform-roadmap');
+    const [breakingUrl, setBreakingUrl] = useState('/constitutional-reform-roadmap');
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const fetchConfig = async ()=>{

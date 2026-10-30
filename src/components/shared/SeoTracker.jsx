@@ -54,7 +54,7 @@ export function SeoTracker({
     const effectiveTitle = (metaTitle || title || (isPage ? 'Static Page Title' : 'Headline Title')).trim();
     const effectiveDesc = (metaDescription || summary || 'Add a compelling meta description to optimize snippet visibility across Google and news aggregators.').trim();
     const effectiveSlug = (slug || 'permalink-slug').trim();
-    const effectiveCanonical = (canonicalUrl || `https://thechronicle.press/${isPage ? 'pages' : 'articles'}/${effectiveSlug}`).trim();
+    const effectiveCanonical = (canonicalUrl || `https://thechronicle.press/${effectiveSlug}`).trim();
     const effectiveOgImage = (ogImage || featuredImage || 'https://thechronicle.press/og-default.jpg').trim();
 
     // Strip HTML from content to evaluate text metrics
@@ -854,7 +854,7 @@ export function SeoTracker({
                             {/* Headline Clickable Link (Google Blue) */}
                             <div>
                                 <a
-                                    href={`https://thechronicle.press/${isPage ? 'pages' : 'articles'}/${effectiveSlug}`}
+                                    href={`https://thechronicle.press/${effectiveSlug}`}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="text-base sm:text-lg font-medium text-blue-600 dark:text-blue-400 hover:underline leading-snug line-clamp-2"

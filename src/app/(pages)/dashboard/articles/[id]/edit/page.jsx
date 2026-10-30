@@ -268,7 +268,7 @@ export default function EditArticlePage({ params }) {
                 <div className="flex items-center gap-2">
                     {slug && (
                         <a
-                            href={`https://thechronicle.press/articles/${slug}`}
+                            href={`https://thechronicle.press/${slug}`}
                             target="_blank"
                             rel="noreferrer"
                             className={buttonVariants({
@@ -323,7 +323,7 @@ export default function EditArticlePage({ params }) {
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold">URL Slug</Label>
                                 <div className="flex items-center gap-1.5 font-mono text-xs">
-                                    <span className="text-muted-foreground">https://thechronicle.press/articles/</span>
+                                    <span className="text-muted-foreground">https://thechronicle.press/</span>
                                     <Input
                                         value={slug}
                                         onChange={(e) => setSlug(e.target.value)}

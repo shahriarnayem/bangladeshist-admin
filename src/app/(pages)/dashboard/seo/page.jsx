@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export default function SeoPage() {
     const [indexNowKey, setIndexNowKey] = useState('b39e4a81cf204481b764269147f8976a');
     const [copiedKey, setCopiedKey] = useState(false);
-    const [testUrl, setTestUrl] = useState('https://thechronicle.press/articles/remittance-shift-2026');
+    const [testUrl, setTestUrl] = useState('https://thechronicle.press/remittance-shift-2026');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
@@ -234,7 +234,7 @@ export default function SeoPage() {
                   Broadcast an individual article or category URL immediately to all participating crawl engines.
                 </p>
                 <form onSubmit={handleTriggerIndexing} className='flex gap-2'>
-                  <Input value={testUrl} onChange={(e)=>setTestUrl(e.target.value)} placeholder='https://thechronicle.press/articles/slug' className='font-mono text-xs'/>
+                  <Input value={testUrl} onChange={(e)=>setTestUrl(e.target.value)} placeholder='https://thechronicle.press/slug' className='font-mono text-xs'/>
                   <Button type='submit' disabled={isSubmitting} size='sm' className='shrink-0 gap-1.5 text-xs'>
                     <Zap className='size-3.5'/>
                     {isSubmitting ? 'Pinging...' : 'Send Ping'}

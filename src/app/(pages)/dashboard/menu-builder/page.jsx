@@ -118,7 +118,7 @@ export default function MenuBuilderPage() {
         const toAdd = availableArticles.filter((a)=>selectedArticles.includes(a.id)).map((a)=>({
                 id: `article-${a.id}-${Date.now()}`,
                 label: a.title,
-                url: `/articles/${a.slug}`,
+                url: `/${a.slug}`,
                 type: 'Article'
             }));
         if (toAdd.length === 0) {
@@ -422,6 +422,7 @@ export default function MenuBuilderPage() {
                           <span className="font-medium text-foreground truncate max-w-[200px]" title={article.title}>
                             {article.title}
                           </span>
+                          <span className="font-mono text-[10px] text-muted-foreground ml-auto">/{article.slug}</span>
                         </label>)}
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={addArticlesToMenu} disabled={selectedArticles.length === 0} className="w-full text-xs h-8">

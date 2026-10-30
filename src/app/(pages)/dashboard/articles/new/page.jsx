@@ -227,7 +227,7 @@ export default function NewArticlePage() {
                             <div className='space-y-2'>
                                 <Label htmlFor='slug'>Permalink Slug</Label>
                                 <div className='flex items-center gap-1.5 font-mono text-xs text-muted-foreground'>
-                                    <span>/articles/</span>
+                                    <span>/</span>
                                     <Input
                                         id='slug'
                                         value={slug}
