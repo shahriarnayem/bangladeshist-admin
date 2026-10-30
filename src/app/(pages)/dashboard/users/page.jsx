@@ -154,7 +154,7 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">Invite Staff Member</DialogTitle>
             <DialogDescription className="text-xs">
-              Assign editorial privileges and configure author byline access.
+              Assign editorial privileges and configure author permissions.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateUser} className="space-y-4 py-2">
@@ -187,8 +187,8 @@ export default function UsersPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Byline / Reporter Desk Title</Label>
-              <Input placeholder="e.g. Investigative Senior Correspondent" value={newBio} onChange={(e)=>setNewBio(e.target.value)} className="text-xs"/>
+              <Label className="text-xs font-semibold">Designation / Job Title</Label>
+              <Input placeholder="e.g. Senior Investigative Reporter" value={newBio} onChange={(e)=>setNewBio(e.target.value)} className="text-xs"/>
             </div>
 
             <DialogFooter className="pt-2">
@@ -297,7 +297,7 @@ export default function UsersPage() {
               <TableRow>
                 <TableHead className="text-xs">Staff Member</TableHead>
                 <TableHead className="text-xs">Role</TableHead>
-                <TableHead className="text-xs">Desk Byline</TableHead>
+                <TableHead className="text-xs">Designation</TableHead>
                 <TableHead className="text-xs font-mono">Member Since</TableHead>
                 <TableHead className="w-[90px] text-center text-xs">Status</TableHead>
                 <TableHead className="w-[60px] text-center text-xs">Action</TableHead>

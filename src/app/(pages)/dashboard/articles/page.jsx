@@ -107,7 +107,7 @@ export default function ArticlesPage() {
               <TableRow>
                 <TableHead className='w-[420px] text-xs'>Headline & Slug</TableHead>
                 <TableHead className='text-xs'>Beat</TableHead>
-                <TableHead className='text-xs'>Byline Author</TableHead>
+                <TableHead className='text-xs'>Author</TableHead>
                 <TableHead className='text-right text-xs'>Views</TableHead>
                 <TableHead className='w-[100px] text-center text-xs'>Status</TableHead>
                 <TableHead className='text-right text-xs'>Published</TableHead>

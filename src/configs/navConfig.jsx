@@ -110,7 +110,7 @@ export const navItems = [
                         roles: ADMIN_ONLY_ROLES
                     },
                     {
-                        label: 'Editorial Byline Profile',
+                        label: 'Staff Profile Settings',
                         href: '/dashboard/profile',
                         roles: ALL_ROLES
                     }

@@ -389,7 +389,7 @@ function ExecutiveAdminDashboard({ stats, loading, articles, categories, getStat
                             {loading ? '...' : stats.users}
                         </div>
                         <p className="text-[11px] text-muted-foreground">
-                            Accredited byline authors and editors
+                            Accredited staff authors and editors
                         </p>
                     </CardContent>
                 </Card>
@@ -476,7 +476,7 @@ function ExecutiveAdminDashboard({ stats, loading, articles, categories, getStat
                                     <TableRow className="text-xs">
                                         <TableHead>Headline</TableHead>
                                         <TableHead>Desk</TableHead>
-                                        <TableHead>Byline</TableHead>
+                                        <TableHead>Author</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
@@ -885,7 +885,7 @@ function EditorInChiefDashboard({ stats, loading, articles, pendingReviewArticle
 }
 
 /* =========================================================================
-   3. AUTHOR: Journalist Byline & Personal Dispatch Desk
+   3. AUTHOR: Reporter Profile & Personal Dispatch Desk
    ========================================================================= */
 function AuthorReporterDashboard({ profile, myArticles, loading, getStatusBadge, router, loadDashboard }) {
     const publishedCount = myArticles.filter((a) => a.status === 'PUBLISHED').length;
@@ -971,7 +971,7 @@ function AuthorReporterDashboard({ profile, myArticles, loading, getStatusBadge,
                 <Card className="border">
                     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            My Byline Identity
+                            My Profile Identity
                         </CardTitle>
                         <Users className="size-4 text-foreground" />
                     </CardHeader>
@@ -1023,7 +1023,7 @@ function AuthorReporterDashboard({ profile, myArticles, loading, getStatusBadge,
                         <Edit3 className="size-4" />
                     </div>
                     <div>
-                        <div className="text-xs font-semibold">Edit My Byline & Bio</div>
+                        <div className="text-xs font-semibold">Edit My Profile & Bio</div>
                         <div className="text-[11px] text-muted-foreground">Update avatar and author info</div>
                     </div>
                 </Link>

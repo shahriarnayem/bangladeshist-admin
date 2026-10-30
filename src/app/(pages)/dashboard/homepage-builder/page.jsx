@@ -44,7 +44,7 @@ const DEFAULT_SECTIONS = [
     {
         id: 'sec-opinion',
         name: 'Opinion & Editorial Columns',
-        description: 'Byline essays, guest commentary, and editorial board stances.',
+        description: 'Opinion columns, guest commentary, and editorial board stances.',
         enabled: true,
         articleCount: 4,
         icon: 'MessageSquare'

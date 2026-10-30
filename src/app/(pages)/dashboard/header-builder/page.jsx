@@ -247,7 +247,7 @@ export default function HeaderBuilderPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Editorial Motto / Byline</Label>
+              <Label className="text-xs font-semibold">Editorial Motto / Tagline</Label>
               <Input value={config.mastheadMotto} onChange={(e)=>setConfig((prev)=>({
                 ...prev,
                 mastheadMotto: e.target.value

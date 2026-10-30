@@ -75,7 +75,7 @@ const ROLE_DEFINITIONS = {
         canCurateHomepage: true,
     },
     AUTHOR: {
-        title: 'Staff Reporter & Byline Journalist',
+        title: 'Staff Reporter & Author',
         badge: 'AUTHOR',
         badgeVariant: 'outline',
         description: 'Drafting and filing dispatches, personal story archive, uploading press photography, and generating social photocards.',
@@ -245,7 +245,7 @@ export default function ProfilePage() {
 
             const data = await res.json();
             if (data.success) {
-                toast.success('Editorial byline & profile successfully saved to MongoDB');
+                toast.success('Author profile successfully saved to MongoDB');
                 // Broadcast change so sidebar and header update live
                 window.dispatchEvent(new CustomEvent('user-persona-changed', { detail: data.profile }));
             } else {
@@ -343,7 +343,7 @@ export default function ProfilePage() {
                         </Badge>
                     </div>
                     <p className='text-muted-foreground text-sm'>
-                        Manage your author byline, public bio, Cloudinary avatar, security credentials, and newsroom role permissions.
+                        Manage your author profile, public bio, Cloudinary avatar, security credentials, and newsroom role permissions.
                     </p>
                 </div>
 
@@ -375,7 +375,7 @@ export default function ProfilePage() {
                                     {currentRoleMeta.badge}
                                 </Badge>
                                 <Badge variant='outline' className='font-mono text-[10px] text-muted-foreground'>
-                                    Verified Byline
+                                    Verified Author
                                 </Badge>
                             </div>
 
@@ -435,24 +435,24 @@ export default function ProfilePage() {
             </Card>
 
             {/* Profile Configuration Tabs */}
-            <Tabs defaultValue='byline' className='w-full'>
+            <Tabs defaultValue='profile' className='w-full'>
                 <TabsList className='mb-6 grid w-full grid-cols-2 md:grid-cols-4 max-w-2xl'>
-                    <TabsTrigger value='byline' className='text-xs'>Byline & Identity</TabsTrigger>
+                    <TabsTrigger value='profile' className='text-xs'>Profile & Bio</TabsTrigger>
                     <TabsTrigger value='rbac' className='text-xs'>Role & Permissions</TabsTrigger>
                     <TabsTrigger value='security' className='text-xs'>Security & Auth</TabsTrigger>
                     <TabsTrigger value='preferences' className='text-xs'>Newsroom Preferences</TabsTrigger>
                 </TabsList>
 
-                {/* TAB 1: BYLINE & IDENTITY */}
-                <TabsContent value='byline' className='space-y-6'>
+                {/* TAB 1: PROFILE & BIO */}
+                <TabsContent value='profile' className='space-y-6'>
                     <div className='grid gap-6 md:grid-cols-3'>
                         {/* Left 2 Cols: Text fields */}
                         <div className='space-y-6 md:col-span-2'>
                             <Card className='border'>
                                 <CardHeader className='pb-3'>
-                                    <CardTitle className='text-base font-semibold'>Editorial Byline & Accreditation</CardTitle>
+                                    <CardTitle className='text-base font-semibold'>Author Profile & Bio</CardTitle>
                                     <CardDescription className='text-xs'>
-                                        These credentials are displayed publicly beneath your published stories and within the author byline box.
+                                        These details are displayed publicly beneath your published stories and in the author profile box.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className='space-y-4'>
@@ -595,9 +595,9 @@ export default function ProfilePage() {
                         <div className='space-y-6'>
                             <Card className='border'>
                                 <CardHeader className='pb-3'>
-                                    <CardTitle className='text-base font-semibold'>Byline Headshot</CardTitle>
+                                    <CardTitle className='text-base font-semibold'>Author Headshot Photo</CardTitle>
                                     <CardDescription className='text-xs'>
-                                        High-resolution photograph for author bylines and press releases.
+                                        High-resolution photograph for author profile and articles.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className='space-y-4'>
@@ -626,7 +626,7 @@ export default function ProfilePage() {
                                         className='w-full text-xs font-medium gap-1.5'
                                     >
                                         {isSaving ? <Loader2 className='size-3.5 animate-spin' /> : <Save className='size-3.5' />}
-                                        Save Byline Profile
+                                        Save Profile
                                     </Button>
                                 </CardFooter>
                             </Card>
