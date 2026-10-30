@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImagePicker } from '@/components/shared/ImagePicker';
 import { WordpressEditor } from '@/components/shared/WordpressEditor';
+import { SeoTracker } from '@/components/shared/SeoTracker';
 import { buildCategoryTree } from '@/lib/taxonomy';
 
 export default function NewArticlePage() {
@@ -32,6 +33,13 @@ export default function NewArticlePage() {
     const [currentUser, setCurrentUser] = useState(null);
     const [featuredImage, setFeaturedImage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // SEO Tracker State
+    const [metaTitle, setMetaTitle] = useState('');
+    const [metaDescription, setMetaDescription] = useState('');
+    const [keywords, setKeywords] = useState('');
+    const [canonicalUrl, setCanonicalUrl] = useState('');
+    const [ogImage, setOgImage] = useState('');
 
     useEffect(() => {
         async function loadMetadata() {
@@ -135,7 +143,12 @@ export default function NewArticlePage() {
                     source: source.trim() || null,
                     tagNames: tags,
                     status,
-                    featuredImage: featuredImage.trim() || null
+                    featuredImage: featuredImage.trim() || null,
+                    metaTitle: metaTitle.trim() || null,
+                    metaDescription: metaDescription.trim() || null,
+                    canonicalUrl: canonicalUrl.trim() || null,
+                    keywords: keywords.trim() || null,
+                    ogImage: ogImage.trim() || null
                 })
             });
             const data = await res.json();
@@ -236,13 +249,34 @@ export default function NewArticlePage() {
                         </CardContent>
                     </Card>
 
-                    {/* Full WordPress-Style Markdown & Visual Broadsheet Editor */}
+                    {/* Full WordPress-Style Visual WYSIWYG & Broadsheet Editor */}
                     <WordpressEditor
                         value={content}
                         onChange={setContent}
                         authorId={currentUser?.id}
                         placeholder="Draft the story copy here with headings, citations, blockquotes, and media..."
                         minHeight="480px"
+                    />
+
+                    {/* Newsroom SEO & Google SERP Tracker */}
+                    <SeoTracker
+                        title={title}
+                        slug={slug}
+                        summary={summary}
+                        content={content}
+                        featuredImage={featuredImage}
+                        categoryName={selectedCategory?.name}
+                        authorId={currentUser?.id}
+                        metaTitle={metaTitle}
+                        onMetaTitleChange={setMetaTitle}
+                        metaDescription={metaDescription}
+                        onMetaDescriptionChange={setMetaDescription}
+                        keywords={keywords}
+                        onKeywordsChange={setKeywords}
+                        canonicalUrl={canonicalUrl}
+                        onCanonicalUrlChange={setCanonicalUrl}
+                        ogImage={ogImage}
+                        onOgImageChange={setOgImage}
                     />
                 </div>
 

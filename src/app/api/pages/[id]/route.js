@@ -34,7 +34,19 @@ export async function PUT(req, { params }) {
     try {
         const { id } = await params;
         const body = await req.json();
-        const { title, slug: customSlug, content, excerpt, isPublished, showInHeader, showInFooter } = body;
+        const {
+            title,
+            slug: customSlug,
+            content,
+            excerpt,
+            isPublished,
+            showInHeader,
+            showInFooter,
+            metaTitle,
+            metaDescription,
+            canonicalUrl,
+            ogImage
+        } = body;
         const updateData = {};
         if (title !== undefined) updateData.title = title.trim();
         if (customSlug !== undefined) updateData.slug = slugify(customSlug);
@@ -42,6 +54,10 @@ export async function PUT(req, { params }) {
         if (excerpt !== undefined) updateData.excerpt = excerpt?.trim() || null;
         if (isPublished !== undefined) updateData.status = isPublished ? 'PUBLISHED' : 'DRAFT';
         if (showInFooter !== undefined) updateData.showInFooter = Boolean(showInFooter);
+        if (metaTitle !== undefined) updateData.metaTitle = metaTitle?.trim() || null;
+        if (metaDescription !== undefined) updateData.metaDescription = metaDescription?.trim() || null;
+        if (canonicalUrl !== undefined) updateData.canonicalUrl = canonicalUrl?.trim() || null;
+        if (ogImage !== undefined) updateData.ogImage = ogImage?.trim() || null;
         const updated = await db.page.update({
             where: {
                 id

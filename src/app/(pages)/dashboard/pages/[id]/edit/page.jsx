@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { WordpressEditor } from '@/components/shared/WordpressEditor';
+import { SeoTracker } from '@/components/shared/SeoTracker';
 export default function EditStaticPage({ params }) {
     const router = useRouter();
     const resolvedParams = use(params);
@@ -24,6 +25,13 @@ export default function EditStaticPage({ params }) {
     const [content, setContent] = useState('');
     const [isPublished, setIsPublished] = useState(true);
     const [showInFooter, setShowInFooter] = useState(true);
+
+    // SEO States
+    const [metaTitle, setMetaTitle] = useState('');
+    const [metaDescription, setMetaDescription] = useState('');
+    const [keywords, setKeywords] = useState('');
+    const [canonicalUrl, setCanonicalUrl] = useState('');
+    const [ogImage, setOgImage] = useState('');
     useEffect(()=>{
         async function fetchPage() {
             setLoading(true);
@@ -38,6 +46,11 @@ export default function EditStaticPage({ params }) {
                     setContent(p1.content || '');
                     setIsPublished(p1.status === 'PUBLISHED');
                     setShowInFooter(Boolean(p1.showInFooter));
+                    setMetaTitle(p1.metaTitle || '');
+                    setMetaDescription(p1.metaDescription || '');
+                    setKeywords(p1.keywords || '');
+                    setCanonicalUrl(p1.canonicalUrl || '');
+                    setOgImage(p1.ogImage || '');
                 } else {
                     toast.error(data.error || 'Page not found');
                 }
@@ -70,7 +83,12 @@ export default function EditStaticPage({ params }) {
                     excerpt: excerpt.trim() || null,
                     content: content.trim(),
                     isPublished,
-                    showInFooter
+                    showInFooter,
+                    metaTitle: metaTitle.trim() || null,
+                    metaDescription: metaDescription.trim() || null,
+                    canonicalUrl: canonicalUrl.trim() || null,
+                    keywords: keywords.trim() || null,
+                    ogImage: ogImage.trim() || null
                 })
             });
             const data = await res.json();
@@ -181,8 +199,27 @@ export default function EditStaticPage({ params }) {
             </CardContent>
           </Card>
 
-          { /* WordPress-Style Markdown & Visual Broadsheet Editor */ }
+          { /* WordPress-Style Visual WYSIWYG & Broadsheet Editor */ }
           <WordpressEditor value={content} onChange={setContent} placeholder="Edit institutional page content..." minHeight="480px"/>
+
+          { /* Institutional Page SEO & Google SERP Tracker */ }
+          <SeoTracker
+            title={title}
+            slug={slug}
+            summary={excerpt}
+            content={content}
+            isPage={true}
+            metaTitle={metaTitle}
+            onMetaTitleChange={setMetaTitle}
+            metaDescription={metaDescription}
+            onMetaDescriptionChange={setMetaDescription}
+            keywords={keywords}
+            onKeywordsChange={setKeywords}
+            canonicalUrl={canonicalUrl}
+            onCanonicalUrlChange={setCanonicalUrl}
+            ogImage={ogImage}
+            onOgImageChange={setOgImage}
+          />
         </div>
 
         { /* Right Column: Settings & Placement */ }

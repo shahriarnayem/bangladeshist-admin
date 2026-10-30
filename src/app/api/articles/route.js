@@ -134,7 +134,12 @@ export async function POST(req) {
       status = 'PUBLISHED',
       featuredImage,
       isBreaking = false,
-      isFeatured = false
+      isFeatured = false,
+      metaTitle,
+      metaDescription,
+      canonicalUrl,
+      keywords,
+      ogImage
     } = body;
 
     if (!title || !title.trim()) {
@@ -227,7 +232,12 @@ export async function POST(req) {
         featuredImage: featuredImage || null,
         isBreaking: Boolean(isBreaking),
         isFeatured: Boolean(isFeatured),
-        publishDate: status === 'PUBLISHED' ? new Date() : null
+        publishDate: status === 'PUBLISHED' ? new Date() : null,
+        metaTitle: metaTitle?.trim() || null,
+        metaDescription: metaDescription?.trim() || null,
+        canonicalUrl: canonicalUrl?.trim() || null,
+        keywords: keywords?.trim() || null,
+        ogImage: ogImage?.trim() || null
       },
       include: {
         category: {

@@ -26,6 +26,10 @@ export default function SeoPage() {
     const [canonicalDomain, setCanonicalDomain] = useState('https://thechronicle.press');
     const [enableRobots, setEnableRobots] = useState(true);
     const [googleClientEmail, setGoogleClientEmail] = useState('indexing-service@thechronicle-prod.iam.gserviceaccount.com');
+    const [googleVerification, setGoogleVerification] = useState('');
+    const [bingVerification, setBingVerification] = useState('');
+    const [publisherName, setPublisherName] = useState('The Chronicle Media Group');
+    const [twitterHandle, setTwitterHandle] = useState('@thechronicle');
     useEffect(()=>{
         async function loadSettings() {
             try {
@@ -40,6 +44,10 @@ export default function SeoPage() {
                     if (s.canonicalDomain) setCanonicalDomain(s.canonicalDomain);
                     if (s.enableRobots !== undefined) setEnableRobots(s.enableRobots === 'true' || s.enableRobots === true);
                     if (s.googleClientEmail) setGoogleClientEmail(s.googleClientEmail);
+                    if (s.googleVerification) setGoogleVerification(s.googleVerification);
+                    if (s.bingVerification) setBingVerification(s.bingVerification);
+                    if (s.publisherName) setPublisherName(s.publisherName);
+                    if (s.twitterHandle) setTwitterHandle(s.twitterHandle);
                 }
             } catch  {
             // Fallback to defaults
@@ -133,7 +141,11 @@ export default function SeoPage() {
                         ogImage,
                         canonicalDomain,
                         enableRobots: String(enableRobots),
-                        googleClientEmail
+                        googleClientEmail,
+                        googleVerification,
+                        bingVerification,
+                        publisherName,
+                        twitterHandle
                     }
                 })
             });
@@ -310,6 +322,41 @@ export default function SeoPage() {
                 <div className='space-y-1.5'>
                   <Label className='text-xs font-semibold'>Default OpenGraph Image URL</Label>
                   <Input value={ogImage} onChange={(e)=>setOgImage(e.target.value)} className='font-mono text-xs'/>
+                </div>
+              </div>
+
+              <div className='grid gap-4 sm:grid-cols-2 border-t pt-4'>
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-semibold'>Publisher Organization Name (Schema.org)</Label>
+                  <Input value={publisherName} onChange={(e)=>setPublisherName(e.target.value)} placeholder='The Chronicle Media Group' className='text-xs'/>
+                </div>
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-semibold'>Official Twitter / X Newsroom Handle</Label>
+                  <Input value={twitterHandle} onChange={(e)=>setTwitterHandle(e.target.value)} placeholder='@thechronicle' className='font-mono text-xs'/>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          { /* Webmaster Verification Codes */ }
+          <Card className='border'>
+            <CardHeader className='pb-3'>
+              <CardTitle className='text-base font-semibold'>Search Engine Webmaster Verification</CardTitle>
+              <CardDescription className='text-xs'>
+                Meta verification tags injected into root document header.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-4'>
+              <div className='grid gap-4 sm:grid-cols-2'>
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-semibold'>Google Search Console Verification Tag</Label>
+                  <Input value={googleVerification} onChange={(e)=>setGoogleVerification(e.target.value)} placeholder='google-site-verification=AbCdEf123...' className='font-mono text-xs'/>
+                  <p className='text-muted-foreground text-[10px]'>HTML tag verification code or token.</p>
+                </div>
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-semibold'>Bing Webmaster Verification Code</Label>
+                  <Input value={bingVerification} onChange={(e)=>setBingVerification(e.target.value)} placeholder='msvalidate.01=123456789...' className='font-mono text-xs'/>
+                  <p className='text-muted-foreground text-[10px]'>Bing & Yahoo webmaster authentication token.</p>
                 </div>
               </div>
             </CardContent>

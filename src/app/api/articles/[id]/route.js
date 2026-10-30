@@ -62,7 +62,12 @@ export async function PUT(req, { params }) {
             status,
             featuredImage,
             isBreaking,
-            isFeatured
+            isFeatured,
+            metaTitle,
+            metaDescription,
+            canonicalUrl,
+            keywords,
+            ogImage
         } = body;
         const existing = await db.article.findUnique({
             where: {
@@ -119,6 +124,11 @@ export async function PUT(req, { params }) {
         if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
         if (isBreaking !== undefined) updateData.isBreaking = Boolean(isBreaking);
         if (isFeatured !== undefined) updateData.isFeatured = Boolean(isFeatured);
+        if (metaTitle !== undefined) updateData.metaTitle = metaTitle?.trim() || null;
+        if (metaDescription !== undefined) updateData.metaDescription = metaDescription?.trim() || null;
+        if (canonicalUrl !== undefined) updateData.canonicalUrl = canonicalUrl?.trim() || null;
+        if (keywords !== undefined) updateData.keywords = keywords?.trim() || null;
+        if (ogImage !== undefined) updateData.ogImage = ogImage?.trim() || null;
         const updated = await db.article.update({
             where: {
                 id

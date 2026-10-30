@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { WordpressEditor } from '@/components/shared/WordpressEditor';
+import { SeoTracker } from '@/components/shared/SeoTracker';
 export default function NewStaticPage() {
     const router = useRouter();
     const [title, setTitle] = useState('');
@@ -20,6 +21,13 @@ export default function NewStaticPage() {
     const [showInHeader, setShowInHeader] = useState(false);
     const [showInFooter, setShowInFooter] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    // SEO States
+    const [metaTitle, setMetaTitle] = useState('');
+    const [metaDescription, setMetaDescription] = useState('');
+    const [keywords, setKeywords] = useState('');
+    const [canonicalUrl, setCanonicalUrl] = useState('');
+    const [ogImage, setOgImage] = useState('');
     const handleTitleChange = (val)=>{
         setTitle(val);
         const generated = val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
@@ -45,7 +53,12 @@ export default function NewStaticPage() {
                     content: content.trim(),
                     isPublished,
                     showInHeader,
-                    showInFooter
+                    showInFooter,
+                    metaTitle: metaTitle.trim() || null,
+                    metaDescription: metaDescription.trim() || null,
+                    canonicalUrl: canonicalUrl.trim() || null,
+                    keywords: keywords.trim() || null,
+                    ogImage: ogImage.trim() || null
                 })
             });
             const data = await res.json();
@@ -118,8 +131,27 @@ export default function NewStaticPage() {
             </CardContent>
           </Card>
 
-          { /* WordPress-Style Markdown & Visual Broadsheet Editor */ }
+          { /* WordPress-Style Visual WYSIWYG & Broadsheet Editor */ }
           <WordpressEditor value={content} onChange={setContent} placeholder="Draft institutional page body with headings, tables, links, and media..." minHeight="480px"/>
+
+          { /* Institutional Page SEO & Google SERP Tracker */ }
+          <SeoTracker
+            title={title}
+            slug={slug}
+            summary={excerpt}
+            content={content}
+            isPage={true}
+            metaTitle={metaTitle}
+            onMetaTitleChange={setMetaTitle}
+            metaDescription={metaDescription}
+            onMetaDescriptionChange={setMetaDescription}
+            keywords={keywords}
+            onKeywordsChange={setKeywords}
+            canonicalUrl={canonicalUrl}
+            onCanonicalUrlChange={setCanonicalUrl}
+            ogImage={ogImage}
+            onOgImageChange={setOgImage}
+          />
         </div>
 
         { /* Right Column: Settings & Placement */ }

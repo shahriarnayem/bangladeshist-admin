@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImagePicker } from '@/components/shared/ImagePicker';
 import { WordpressEditor } from '@/components/shared/WordpressEditor';
+import { SeoTracker } from '@/components/shared/SeoTracker';
 import { buildCategoryTree } from '@/lib/taxonomy';
 
 export default function EditArticlePage({ params }) {
@@ -52,6 +53,13 @@ export default function EditArticlePage({ params }) {
     const [availableTags, setAvailableTags] = useState([]);
     const [authorId, setAuthorId] = useState('');
     const [featuredImage, setFeaturedImage] = useState('');
+
+    // SEO Tracker State
+    const [metaTitle, setMetaTitle] = useState('');
+    const [metaDescription, setMetaDescription] = useState('');
+    const [keywords, setKeywords] = useState('');
+    const [canonicalUrl, setCanonicalUrl] = useState('');
+    const [ogImage, setOgImage] = useState('');
 
     // Initial load
     useEffect(() => {
@@ -89,6 +97,11 @@ export default function EditArticlePage({ params }) {
                         setCategoryId(a1.categoryId || '');
                         setAuthorId(a1.authorId || '');
                         setSource(a1.source || '');
+                        setMetaTitle(a1.metaTitle || '');
+                        setMetaDescription(a1.metaDescription || '');
+                        setKeywords(a1.keywords || '');
+                        setCanonicalUrl(a1.canonicalUrl || '');
+                        setOgImage(a1.ogImage || '');
                         if (Array.isArray(a1.tags)) {
                             setTags(a1.tags.map((t) => t.name));
                         }
@@ -172,7 +185,12 @@ export default function EditArticlePage({ params }) {
                     status,
                     isBreaking,
                     isFeatured,
-                    featuredImage: featuredImage.trim() || null
+                    featuredImage: featuredImage.trim() || null,
+                    metaTitle: metaTitle.trim() || null,
+                    metaDescription: metaDescription.trim() || null,
+                    canonicalUrl: canonicalUrl.trim() || null,
+                    keywords: keywords.trim() || null,
+                    ogImage: ogImage.trim() || null
                 })
             });
             const data = await res.json();
@@ -322,13 +340,34 @@ export default function EditArticlePage({ params }) {
                         </CardContent>
                     </Card>
 
-                    {/* WordPress-Style Markdown & Visual Broadsheet Editor */}
+                    {/* WordPress-Style Visual WYSIWYG & Broadsheet Editor */}
                     <WordpressEditor
                         value={content}
                         onChange={setContent}
                         authorId={authorId}
                         placeholder="Edit story copy with full formatting..."
                         minHeight="480px"
+                    />
+
+                    {/* Newsroom SEO & Google SERP Tracker */}
+                    <SeoTracker
+                        title={title}
+                        slug={slug}
+                        summary={summary}
+                        content={content}
+                        featuredImage={featuredImage}
+                        categoryName={selectedCategory?.name}
+                        authorId={authorId}
+                        metaTitle={metaTitle}
+                        onMetaTitleChange={setMetaTitle}
+                        metaDescription={metaDescription}
+                        onMetaDescriptionChange={setMetaDescription}
+                        keywords={keywords}
+                        onKeywordsChange={setKeywords}
+                        canonicalUrl={canonicalUrl}
+                        onCanonicalUrlChange={setCanonicalUrl}
+                        ogImage={ogImage}
+                        onOgImageChange={setOgImage}
                     />
 
                     {/* Featured Hero Image with ImagePicker Component */}

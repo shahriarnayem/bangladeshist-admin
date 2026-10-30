@@ -129,9 +129,20 @@ export default function ArticlesPage() {
                         <Link href={`/dashboard/articles/${article.id}/edit`} className='font-semibold text-sm hover:underline line-clamp-1 text-foreground'>
                           {article.title}
                         </Link>
-                        <p className='font-mono text-xs text-muted-foreground line-clamp-1'>
-                          /articles/{article.slug}
-                        </p>
+                        <div className='flex items-center gap-2'>
+                          <p className='font-mono text-xs text-muted-foreground line-clamp-1'>
+                            /articles/{article.slug}
+                          </p>
+                          {article.metaTitle || article.keywords ? (
+                            <Badge variant='outline' className='text-[9px] h-4 px-1.5 py-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-mono shrink-0'>
+                              SEO 85+
+                            </Badge>
+                          ) : (
+                            <Badge variant='outline' className='text-[9px] h-4 px-1.5 py-0 border-amber-500/40 text-amber-600 dark:text-amber-400 font-mono shrink-0'>
+                              SEO NEEDED
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>

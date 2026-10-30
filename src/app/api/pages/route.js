@@ -24,7 +24,19 @@ export async function GET() {
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { title, slug: customSlug, content, excerpt, isPublished = true, showInHeader = false, showInFooter = true } = body;
+        const {
+            title,
+            slug: customSlug,
+            content,
+            excerpt,
+            isPublished = true,
+            showInHeader = false,
+            showInFooter = true,
+            metaTitle,
+            metaDescription,
+            canonicalUrl,
+            ogImage
+        } = body;
         if (!title || !title.trim()) {
             return NextResponse.json({
                 success: false,
@@ -41,7 +53,11 @@ export async function POST(req) {
                 content: content?.trim() || '',
                 excerpt: excerpt?.trim() || null,
                 status: isPublished ? 'PUBLISHED' : 'DRAFT',
-                showInFooter: Boolean(showInFooter)
+                showInFooter: Boolean(showInFooter),
+                metaTitle: metaTitle?.trim() || null,
+                metaDescription: metaDescription?.trim() || null,
+                canonicalUrl: canonicalUrl?.trim() || null,
+                ogImage: ogImage?.trim() || null
             }
         });
         await logAudit('create', 'Page', page.id, `Created static page "${page.title}"`);
