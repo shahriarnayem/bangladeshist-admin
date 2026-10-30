@@ -38,6 +38,10 @@ export async function GET(req) {
     if (status && status !== 'ALL') {
       where.status = status;
     }
+    const authorId = searchParams.get('authorId');
+    if (authorId && authorId !== 'ALL') {
+      where.authorId = authorId;
+    }
     if (category && category !== 'ALL') {
       where.OR = [
         {
